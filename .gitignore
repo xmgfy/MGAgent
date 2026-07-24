@@ -1,0 +1,75 @@
+# 系统文件
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE 目录
+.vscode/
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Python 相关
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+requirements.txt.lock
+
+# Node.js 相关
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+.installed.cfg
+
+# 数据目录（数据库文件、上传文件等）
+data/
+mgagent-backend/data/
+mgagent-admin-backend/data/
+
+# 日志文件
+*.log
+logs/
+
+# 环境变量文件
+.env
+.env.local
+.env.*.local
+
+# 临时文件
+tmp/
+temp/
+*.tmp
+
+# 测试报告
+coverage.xml
+htmlcov/
+.pytest_cache/
+.coverage
+
+# Docker
+Dockerfile
+docker-compose.yml
+
+# 部署相关
+*.tar.gz
+*.zip
+
+# PIDs
+.pids/
+
+# 截图目录（如果不需要上传截图）
+# docs/images/
