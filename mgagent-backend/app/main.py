@@ -1,12 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.routes import router
-from app.db.models import Base
+from app.db.database import init_db
 from app.config.settings import settings
-from sqlalchemy import create_engine
 import uvicorn
 
-Base.metadata.create_all(bind=create_engine(settings.DATABASE_URL))
+# 初始化数据库
+init_db()
 
 app = FastAPI(
     title="MGAgent 智能客服助手",

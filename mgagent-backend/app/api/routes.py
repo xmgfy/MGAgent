@@ -15,10 +15,8 @@ from app.db.crud import (
     update_user_status, update_user_role, increment_chat_count, verify_password,
     get_anonymous_chat_count, increment_anonymous_chat_count
 )
-from app.db.models import Base
-from sqlalchemy import create_engine
+from app.db.database import engine, get_db
 from app.config.settings import settings
-engine = create_engine(settings.DATABASE_URL)
 from app.agent.core import enterprise_agent
 from app.rag.loader import DocumentLoader
 from app.rag.retriever import vector_retriever
@@ -30,12 +28,7 @@ SECRET_KEY = settings.OPENAI_API_KEY[:32]
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-def get_db():
-    db = SQLAlchemySession(bind=engine)
-    try:
-        yield db
-    finally:
-        db.close()
+# get_db 已从 app.db.database 导入
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     to_encode = data.copy()

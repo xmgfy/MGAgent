@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from .models import Base
 from app.config.settings import settings
+from .models import Base
 
 # MySQL 连接配置
 DATABASE_URL = settings.DATABASE_URL

@@ -10,7 +10,13 @@ class Settings(BaseSettings):
     CHROMA_PERSIST_DIR: str = "data/chroma"
     DOCUMENT_DIR: str = "data/documents"
     
-    DATABASE_URL: str = "sqlite:///./data/chat.db"
+    # MySQL 数据库配置
+    DATABASE_URL: str = "mysql+pymysql://mgagent:mgagent_password_2024@localhost:3306/mgagent?charset=utf8mb4"
+    
+    # Milvus 向量数据库配置
+    MILVUS_HOST: str = "localhost"
+    MILVUS_PORT: int = 19530
+    MILVUS_COLLECTION: str = "mgagent_knowledge"
     
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000

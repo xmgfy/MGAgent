@@ -1,67 +1,103 @@
+"""
+向量数据库管理接口 - 基于 Milvus
+"""
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from app.db.models import Admin
 from .auth import get_current_admin
-from app.config.settings import CHROMA_DIR
+from app.config.settings import settings
+from pymilvus import connections, Collection, utility
 
 router = APIRouter()
 
+
 class VectorDBStats(BaseModel):
     total_chunks: int
-    persist_directory: str
-    embedding_model: str
+    host: str
+    port: int
+    collection_name: str
+
 
 class VectorChunk(BaseModel):
     id: str
     content: str
     metadata: Dict[str, Any]
 
+
+def get_milvus_collection():
+    """获取 Milvus 集合"""
+    connections.connect(
+        alias="default",
+        host=settings.MILVUS_HOST,
+        port=str(settings.MILVUS_PORT)
+    )
+    
+    collection_name = settings.MILVUS_COLLECTION
+    
+    if not utility.has_collection(collection_name):
+        raise HTTPException(status_code=404, detail="向量数据库集合不存在，请先上传文档")
+    
+    collection = Collection(collection_name)
+    collection.load()
+    return collection
+
+
 @router.get("/vector-db/stats", response_model=VectorDBStats)
 async def get_vector_db_stats(admin: Admin = Depends(get_current_admin)):
+    """获取向量数据库统计信息"""
     try:
-        from langchain_chroma import Chroma
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        total_chunks = chroma_client._collection.count()
+        collection = get_milvus_collection()
         
         return VectorDBStats(
-            total_chunks=total_chunks,
-            persist_directory=str(CHROMA_DIR),
-            embedding_model="TF-IDF Embeddings"
+            total_chunks=collection.num_entities,
+            host=settings.MILVUS_HOST,
+            port=settings.MILVUS_PORT,
+            collection_name=settings.MILVUS_COLLECTION
+        )
+    except HTTPException:
+        # 如果集合不存在，返回0
+        return VectorDBStats(
+            total_chunks=0,
+            host=settings.MILVUS_HOST,
+            port=settings.MILVUS_PORT,
+            collection_name=settings.MILVUS_COLLECTION
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.get("/vector-db/chunks", response_model=List[VectorChunk])
 async def list_vector_chunks(
-    limit: int = Query(10),
+    limit: int = Query(50),
     offset: int = Query(0),
     admin: Admin = Depends(get_current_admin)
 ):
+    """列出向量块"""
     try:
-        from langchain_chroma import Chroma
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        results = chroma_client._collection.get(
+        collection = get_milvus_collection()
+        
+        results = collection.query(
+            expr="",
+            output_fields=["id", "content", "metadata"],
             limit=limit,
-            offset=offset,
-            include=["documents", "metadatas", "embeddings"]
+            offset=offset
         )
         
         chunks = []
-        for i, (doc_id, content, metadata) in enumerate(zip(
-            results["ids"],
-            results["documents"],
-            results["metadatas"]
-        )):
+        for result in results:
             chunks.append(VectorChunk(
-                id=doc_id,
-                content=content,
-                metadata=metadata
+                id=result["id"],
+                content=result.get("content", ""),
+                metadata=result.get("metadata", {})
             ))
         
         return chunks
+    except HTTPException:
+        return []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.get("/vector-db/search")
 async def search_vector_db(
@@ -69,21 +105,30 @@ async def search_vector_db(
     k: int = Query(3),
     admin: Admin = Depends(get_current_admin)
 ):
+    """搜索向量数据库"""
     try:
-        from langchain_chroma import Chroma
-        from langchain_openai import OpenAIEmbeddings
+        from app.rag.milvus_service import MilvusService
         
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
+        milvus_service = MilvusService(
+            host=settings.MILVUS_HOST,
+            port=settings.MILVUS_PORT,
+            collection_name=settings.MILVUS_COLLECTION
+        )
         
-        results = chroma_client.similarity_search_with_score(query, k=k)
+        # 生成查询嵌入
+        from app.rag.retriever import vector_retriever
+        query_embedding = vector_retriever.embeddings.embed_query(query)
+        
+        # 搜索
+        results = milvus_service.similarity_search(query_embedding, k=k)
         
         search_results = []
-        for doc, score in results:
+        for result in results:
             search_results.append({
-                "id": doc.metadata.get("id", str(hash(doc.page_content))),
-                "content": doc.page_content,
-                "metadata": doc.metadata,
-                "similarity": float(1 - score)
+                "id": result["id"],
+                "content": result["content"],
+                "metadata": result["metadata"],
+                "similarity": float(1 - result.get("score", 0))
             })
         
         if not search_results:
@@ -93,29 +138,50 @@ async def search_vector_db(
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.delete("/vector-db/chunks/{chunk_id}")
 async def delete_vector_chunk(chunk_id: str, admin: Admin = Depends(get_current_admin)):
+    """删除单个向量块"""
     try:
-        from langchain_chroma import Chroma
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        chroma_client._collection.delete(ids=[chunk_id])
+        collection = get_milvus_collection()
+        
+        expr = f'id == "{chunk_id}"'
+        collection.delete(expr)
+        collection.flush()
         
         return {"message": f"向量块 {chunk_id} 已删除"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @router.post("/vector-db/clear")
 async def clear_vector_db(admin: Admin = Depends(get_current_admin)):
+    """清空向量数据库"""
     try:
-        from langchain_chroma import Chroma
+        collection_name = settings.MILVUS_COLLECTION
         
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
+        if utility.has_collection(collection_name):
+            collection = Collection(collection_name)
+            collection.drop()
         
-        # 获取所有向量块的ID
-        all_chunks = chroma_client._collection.get(include=["documents"])
-        if all_chunks["ids"]:
-            chroma_client._collection.delete(ids=all_chunks["ids"])
+        # 重新创建集合
+        from pymilvus import CollectionSchema, FieldSchema, DataType
         
-        return {"message": "向量数据库已清空"}
+        fields = [
+            FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=64),
+            FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
+            FieldSchema(name="metadata", dtype=DataType.JSON),
+            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
+        ]
+        
+        schema = CollectionSchema(fields=fields, description="MGAgent 知识库向量集合")
+        collection = Collection(name=collection_name, schema=schema)
+        
+        # 创建索引
+        index_params = {"metric_type": "L2", "index_type": "IVF_FLAT", "params": {"nlist": 1024}}
+        collection.create_index(field_name="embedding", index_params=index_params)
+        collection.load()
+        
+        return {"message": "向量数据库已清空并重新初始化"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
