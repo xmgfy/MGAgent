@@ -1,0 +1,76 @@
+#!/bin/bash
+
+echo "========================================="
+echo "  MGAgent 初始化脚本"
+echo "========================================="
+echo ""
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+echo "项目目录: $PROJECT_DIR"
+echo ""
+
+echo "[1/4] 安装 mgagent-backend 依赖"
+echo "-----------------------------------------"
+cd "$PROJECT_DIR/mgagent-backend"
+echo "正在安装 Python 依赖..."
+pip3 install -r requirements.txt -q
+echo "Python 依赖安装完成"
+echo ""
+
+echo "[2/4] 安装 mgagent-admin-backend 依赖"
+echo "-----------------------------------------"
+cd "$PROJECT_DIR/mgagent-admin-backend"
+echo "正在安装 Python 依赖..."
+pip3 install -r requirements.txt -q
+echo "Python 依赖安装完成"
+echo ""
+
+echo "[3/4] 安装 mgagent-frontend 依赖"
+echo "-----------------------------------------"
+cd "$PROJECT_DIR/mgagent-frontend"
+echo "正在安装 Node.js 依赖..."
+npm install -q
+echo "Node.js 依赖安装完成"
+echo ""
+
+echo "[4/4] 安装 mgagent-admin-frontend 依赖"
+echo "-----------------------------------------"
+cd "$PROJECT_DIR/mgagent-admin-frontend"
+echo "正在安装 Node.js 依赖..."
+npm install -q
+echo "Node.js 依赖安装完成"
+echo ""
+
+echo "[5/4] 创建必要目录"
+echo "-----------------------------------------"
+mkdir -p "$PROJECT_DIR/.pids"
+mkdir -p "$PROJECT_DIR/mgagent-backend/data/chroma"
+mkdir -p "$PROJECT_DIR/mgagent-backend/data/documents"
+echo "目录创建完成"
+echo ""
+
+echo "[6/4] 设置脚本执行权限"
+echo "-----------------------------------------"
+chmod +x "$SCRIPT_DIR/start-all.sh"
+chmod +x "$SCRIPT_DIR/stop-all.sh"
+chmod +x "$SCRIPT_DIR/status.sh"
+chmod +x "$SCRIPT_DIR/init.sh"
+echo "脚本权限设置完成"
+echo ""
+
+echo "========================================="
+echo "  初始化完成!"
+echo "========================================="
+echo ""
+echo "使用说明:"
+echo "  启动所有服务: ./scripts/start-all.sh"
+echo "  停止所有服务: ./scripts/stop-all.sh"
+echo "  检查服务状态: ./scripts/status.sh"
+echo ""
+echo "服务地址:"
+echo "  - 核心前端: http://localhost:5173"
+echo "  - 核心后端: http://localhost:8000"
+echo "  - 管理台前端: http://localhost:8001"
+echo "  - 管理台后端: http://localhost:5174"
+echo ""
