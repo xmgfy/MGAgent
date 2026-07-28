@@ -109,10 +109,23 @@ function App() {
           setCurrentSessionId(sessionId)
         }
         
+        const errorContent = typeof errorDetail === 'object' 
+          ? errorDetail.message 
+          : '系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试。'
+        
         const errorMessage: Message = {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: typeof errorDetail === 'object' ? errorDetail.message : '系统服务暂时不可用，请稍后再试',
+          content: errorContent,
+          created_at: new Date().toISOString(),
+        }
+        setMessages(prev => prev.filter(m => m.id !== tempUserId))
+        setMessages(prev => [...prev, errorMessage])
+      } else {
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: `请求失败: ${error.response?.data?.detail || '未知错误'}。请稍后重试。`,
           created_at: new Date().toISOString(),
         }
         setMessages(prev => prev.filter(m => m.id !== tempUserId))
@@ -170,10 +183,23 @@ function App() {
           setCurrentSessionId(sessionId)
         }
         
+        const errorContent = typeof errorDetail === 'object' 
+          ? errorDetail.message 
+          : '系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试。'
+        
         const errorMessage: Message = {
           id: `error-${Date.now()}`,
           role: 'assistant',
-          content: typeof errorDetail === 'object' ? errorDetail.message : '系统服务暂时不可用，请稍后再试',
+          content: errorContent,
+          created_at: new Date().toISOString(),
+        }
+        setMessages(prev => prev.filter(m => m.id !== tempUserId))
+        setMessages(prev => [...prev, errorMessage])
+      } else {
+        const errorMessage: Message = {
+          id: `error-${Date.now()}`,
+          role: 'assistant',
+          content: `请求失败: ${error.response?.data?.detail || '未知错误'}。请稍后重试。`,
           created_at: new Date().toISOString(),
         }
         setMessages(prev => prev.filter(m => m.id !== tempUserId))

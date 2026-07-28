@@ -1,3 +1,6 @@
+# 方案2: MySQL + Milvus 配置
+# 包含完整的数据库和向量数据库服务
+
 services:
   # MySQL 8.0 数据库
   mysql:
@@ -112,7 +115,12 @@ services:
     environment:
       - API_HOST=0.0.0.0
       - API_PORT=8000
-      - DATABASE_URL=mysql+pymysql://mgagent:mgagent_password_2024@mysql:3306/mgagent?charset=utf8mb4
+      - DATABASE_SCHEME=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-mgagent}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mgagent_password_2024}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mgagent}
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
       - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
@@ -145,21 +153,26 @@ services:
     environment:
       - ADMIN_API_HOST=0.0.0.0
       - ADMIN_API_PORT=8001
-      - DATABASE_URL=mysql+pymysql://mgagent:mgagent_password_2024@mysql:3306/mgagent?charset=utf8mb4
+      - DATABASE_SCHEME=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-mgagent}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mgagent_password_2024}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mgagent}
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
       - DEBUG=False
     ports:
       - "${ADMIN_BACKEND_PORT:-8001}:8001"
     volumes:
-      - backend_data:/app/../mgagent-backend/data
+      - admin_backend_data:/app/data
     depends_on:
       mysql:
         condition: service_healthy
       milvus:
         condition: service_healthy
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8001/"]
+      test: ["CMD", "curl", "-f", "http://localhost:8001/admin/api/health"]
       interval: 30s
       timeout: 5s
       retries: 3
@@ -218,6 +231,8 @@ volumes:
   minio_data:
     driver: local
   backend_data:
+    driver: local
+  admin_backend_data:
     driver: local
 
 networks:

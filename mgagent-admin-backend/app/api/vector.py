@@ -1,22 +1,27 @@
 """
-向量数据库管理接口 - 基于 Milvus
+向量数据库管理接口 - 支持双方案（ChromaDB / Milvus）
+嵌入模型从数据库配置获取，无兜底逻辑
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
 from pydantic import BaseModel
 from typing import List, Dict, Any
 from app.db.models import Admin
 from .auth import get_current_admin
-from app.config.settings import settings
-from pymilvus import connections, Collection, utility
+from app.config.config import is_mysql_scheme, settings
+from app.rag.vector_factory import get_vector_db
+from app.services.model_config_service import get_embeddings_model
 
 router = APIRouter()
 
 
 class VectorDBStats(BaseModel):
     total_chunks: int
-    host: str
-    port: int
-    collection_name: str
+    vector_db_type: str
+    host: str = ""
+    port: str = ""
+    collection_name: str = ""
+    persist_directory: str = ""
+    embedding_model: str = ""
 
 
 class VectorChunk(BaseModel):
@@ -25,44 +30,35 @@ class VectorChunk(BaseModel):
     metadata: Dict[str, Any]
 
 
-def get_milvus_collection():
-    """获取 Milvus 集合"""
-    connections.connect(
-        alias="default",
-        host=settings.MILVUS_HOST,
-        port=str(settings.MILVUS_PORT)
-    )
-    
-    collection_name = settings.MILVUS_COLLECTION
-    
-    if not utility.has_collection(collection_name):
-        raise HTTPException(status_code=404, detail="向量数据库集合不存在，请先上传文档")
-    
-    collection = Collection(collection_name)
-    collection.load()
-    return collection
-
-
 @router.get("/vector-db/stats", response_model=VectorDBStats)
 async def get_vector_db_stats(admin: Admin = Depends(get_current_admin)):
     """获取向量数据库统计信息"""
     try:
-        collection = get_milvus_collection()
+        vector_db = get_vector_db()
+        total_chunks = vector_db.get_total_count()
         
-        return VectorDBStats(
-            total_chunks=collection.num_entities,
-            host=settings.MILVUS_HOST,
-            port=settings.MILVUS_PORT,
-            collection_name=settings.MILVUS_COLLECTION
-        )
-    except HTTPException:
-        # 如果集合不存在，返回0
-        return VectorDBStats(
-            total_chunks=0,
-            host=settings.MILVUS_HOST,
-            port=settings.MILVUS_PORT,
-            collection_name=settings.MILVUS_COLLECTION
-        )
+        # 获取嵌入模型信息
+        embeddings = get_embeddings_model()
+        embedding_model_name = type(embeddings).__name__
+        
+        if is_mysql_scheme():
+            return VectorDBStats(
+                total_chunks=total_chunks,
+                vector_db_type="milvus",
+                host=settings.MILVUS_HOST,
+                port=settings.MILVUS_PORT,
+                collection_name=settings.MILVUS_COLLECTION,
+                embedding_model=embedding_model_name
+            )
+        else:
+            from app.config.config import get_chroma_dir
+            return VectorDBStats(
+                total_chunks=total_chunks,
+                vector_db_type="chromadb",
+                persist_directory=str(get_chroma_dir()),
+                collection_name="mgagent_knowledge",
+                embedding_model=embedding_model_name
+            )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -75,26 +71,21 @@ async def list_vector_chunks(
 ):
     """列出向量块"""
     try:
-        collection = get_milvus_collection()
+        vector_db = get_vector_db()
+        all_chunks = vector_db.get_all_chunks()
         
-        results = collection.query(
-            expr="",
-            output_fields=["id", "content", "metadata"],
-            limit=limit,
-            offset=offset
-        )
+        # 分页
+        paginated_chunks = all_chunks[offset:offset + limit]
         
         chunks = []
-        for result in results:
+        for chunk in paginated_chunks:
             chunks.append(VectorChunk(
-                id=result["id"],
-                content=result.get("content", ""),
-                metadata=result.get("metadata", {})
+                id=chunk["id"],
+                content=chunk.get("content", ""),
+                metadata=chunk.get("metadata", {})
             ))
         
         return chunks
-    except HTTPException:
-        return []
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -105,22 +96,16 @@ async def search_vector_db(
     k: int = Query(3),
     admin: Admin = Depends(get_current_admin)
 ):
-    """搜索向量数据库"""
+    """搜索向量数据库，使用配置的嵌入模型"""
     try:
-        from app.rag.milvus_service import MilvusService
+        vector_db = get_vector_db()
         
-        milvus_service = MilvusService(
-            host=settings.MILVUS_HOST,
-            port=settings.MILVUS_PORT,
-            collection_name=settings.MILVUS_COLLECTION
-        )
-        
-        # 生成查询嵌入
-        from app.rag.retriever import vector_retriever
-        query_embedding = vector_retriever.embeddings.embed_query(query)
+        # 使用配置的嵌入模型生成查询嵌入
+        embeddings = get_embeddings_model()
+        query_embedding = embeddings.embed_query(query)
         
         # 搜索
-        results = milvus_service.similarity_search(query_embedding, k=k)
+        results = vector_db.similarity_search(query_embedding, k=k)
         
         search_results = []
         for result in results:
@@ -128,7 +113,7 @@ async def search_vector_db(
                 "id": result["id"],
                 "content": result["content"],
                 "metadata": result["metadata"],
-                "similarity": float(1 - result.get("score", 0))
+                "similarity": float(1 - result.get("distance", 0))
             })
         
         if not search_results:
@@ -143,11 +128,8 @@ async def search_vector_db(
 async def delete_vector_chunk(chunk_id: str, admin: Admin = Depends(get_current_admin)):
     """删除单个向量块"""
     try:
-        collection = get_milvus_collection()
-        
-        expr = f'id == "{chunk_id}"'
-        collection.delete(expr)
-        collection.flush()
+        vector_db = get_vector_db()
+        vector_db.delete_by_ids([chunk_id])
         
         return {"message": f"向量块 {chunk_id} 已删除"}
     except Exception as e:
@@ -158,29 +140,8 @@ async def delete_vector_chunk(chunk_id: str, admin: Admin = Depends(get_current_
 async def clear_vector_db(admin: Admin = Depends(get_current_admin)):
     """清空向量数据库"""
     try:
-        collection_name = settings.MILVUS_COLLECTION
-        
-        if utility.has_collection(collection_name):
-            collection = Collection(collection_name)
-            collection.drop()
-        
-        # 重新创建集合
-        from pymilvus import CollectionSchema, FieldSchema, DataType
-        
-        fields = [
-            FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=64),
-            FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
-            FieldSchema(name="metadata", dtype=DataType.JSON),
-            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
-        ]
-        
-        schema = CollectionSchema(fields=fields, description="MGAgent 知识库向量集合")
-        collection = Collection(name=collection_name, schema=schema)
-        
-        # 创建索引
-        index_params = {"metric_type": "L2", "index_type": "IVF_FLAT", "params": {"nlist": 1024}}
-        collection.create_index(field_name="embedding", index_params=index_params)
-        collection.load()
+        vector_db = get_vector_db()
+        vector_db.clear_all()
         
         return {"message": "向量数据库已清空并重新初始化"}
     except Exception as e:

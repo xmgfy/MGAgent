@@ -69,5 +69,9 @@ htmlcov/
 # PIDs
 .pids/
 
+# 本地工具脚本（不纳入版本控制）
+git-sync.sh
+scripts/git-sync.sh
+
 # 截图目录（如果不需要上传截图）
 # docs/images/

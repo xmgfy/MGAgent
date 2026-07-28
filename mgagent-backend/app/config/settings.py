@@ -1,12 +1,7 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
-import requests
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: str = ""
-    OPENAI_API_BASE: str = "https://api.openai.com/v1"
-    OPENAI_MODEL: str = "gpt-4o-mini"
-    
     CHROMA_PERSIST_DIR: str = "data/chroma"
     DOCUMENT_DIR: str = "data/documents"
     
@@ -39,13 +34,8 @@ CHROMA_DIR = DATA_DIR / "chroma"
 for dir_path in [DATA_DIR, DOCUMENT_DIR, CHROMA_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)
 
+
 def get_active_model_config():
-    """从admin-backend获取当前启用的模型配置"""
-    try:
-        response = requests.get(f"{settings.ADMIN_API_URL}/model/config/public", timeout=5)
-        if response.status_code == 200:
-            return response.json()
-    except Exception:
-        pass
-    
-    return None
+    """从数据库获取当前启用的模型配置，无配置时抛出异常"""
+    from app.services.model_config_service import get_active_model_config as get_config
+    return get_config()

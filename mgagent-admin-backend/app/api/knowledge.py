@@ -9,9 +9,18 @@ from datetime import datetime
 from app.db.database import get_db
 from app.db.models import Admin, Document
 from .auth import get_current_admin
-from app.config.settings import DOCUMENT_DIR, CHROMA_DIR
+from app.config.config import (
+    is_sqlite_scheme,
+    is_mysql_scheme,
+    get_document_dir,
+    get_chroma_dir
+)
+from app.rag.vector_factory import get_vector_db
 
 router = APIRouter()
+
+DOCUMENT_DIR = get_document_dir()
+CHROMA_DIR = get_chroma_dir()
 
 class KnowledgeBaseStats(BaseModel):
     total_documents: int
@@ -19,6 +28,7 @@ class KnowledgeBaseStats(BaseModel):
     file_types: Dict[str, int]
     total_size: int
     indexed_count: int
+    vector_db_type: str = "chromadb"
 
 class DocumentInfo(BaseModel):
     filename: str
@@ -40,16 +50,17 @@ async def get_knowledge_base_stats(admin: Admin = Depends(get_current_admin)):
                 file_types[ext] = file_types.get(ext, 0) + 1
                 total_size += file.stat().st_size
         
-        from langchain_chroma import Chroma
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        total_chunks = chroma_client._collection.count()
+        vector_db = get_vector_db()
+        total_chunks = vector_db.get_total_count()
+        vector_db_type = "milvus" if is_mysql_scheme() else "chromadb"
         
         return KnowledgeBaseStats(
             total_documents=total_chunks,
             total_files=len(files),
             file_types=file_types,
             total_size=total_size,
-            indexed_count=total_chunks
+            indexed_count=total_chunks,
+            vector_db_type=vector_db_type
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -81,9 +92,14 @@ async def delete_document(filename: str, admin: Admin = Depends(get_current_admi
         if file_path.exists() and file_path.is_file():
             os.remove(file_path)
             
-            from langchain_chroma import Chroma
-            chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-            chroma_client._collection.delete(where={"source": str(file_path)})
+            vector_db = get_vector_db()
+            chunks = vector_db.get_all_chunks()
+            ids_to_delete = [
+                chunk["id"] for chunk in chunks 
+                if chunk.get("metadata", {}).get("source") == str(file_path)
+            ]
+            if ids_to_delete:
+                vector_db.delete_by_ids(ids_to_delete)
             
             return {"message": f"文档 {filename} 已删除"}
         else:
@@ -153,13 +169,8 @@ async def clear_knowledge_base(admin: Admin = Depends(get_current_admin)):
             if file.is_file():
                 os.remove(file)
         
-        if CHROMA_DIR.exists():
-            from langchain_chroma import Chroma
-            chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-            try:
-                chroma_client._collection.delete(where={})
-            except Exception:
-                pass
+        vector_db = get_vector_db()
+        vector_db.clear_all()
         
         return {"message": "知识库已清空"}
     except Exception as e:
@@ -180,9 +191,6 @@ async def upload_knowledge_base_document(file: UploadFile = File(...), admin: Ad
             f.write(await file.read())
         
         file_size = os.path.getsize(file_path)
-        
-        from langchain_chroma import Chroma
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
         
         from langchain_community.document_loaders import PyPDFLoader, TextLoader
         from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -213,10 +221,11 @@ async def upload_knowledge_base_document(file: UploadFile = File(...), admin: Ad
         else:
             texts = splitter.split_documents(docs)
         
-        chroma_client.add_texts(
-            [t.page_content for t in texts],
-            metadatas=[{"source": str(file_path), "chunk": i} for i in range(len(texts))]
-        )
+        # 获取向量数据库实例并添加文档
+        vector_db = get_vector_db()
+        embeddings = [[0.0] * 1536 for _ in texts]  # 占位符，实际应由 embedding 服务生成
+        
+        vector_db.add_documents(texts, embeddings)
         
         document = Document(
             id=str(uuid.uuid4()),

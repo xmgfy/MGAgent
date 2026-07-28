@@ -10,7 +10,7 @@ from app.api.storage import router as storage_router
 from app.api.knowledge import router as knowledge_router
 from app.api.vector import router as vector_router
 from app.api.dashboard import router as dashboard_router
-from app.config.settings import settings
+from app.config.config import settings, get_scheme_info, get_database_scheme
 from app.db import init_db
 from app.db.database import get_db, SessionLocal
 from app.db.crud.admin import create_admin, get_admin_by_username
@@ -19,7 +19,7 @@ import uvicorn
 app = FastAPI(
     title="MGAgent 管理台",
     description="MGAgent 智能体系统管理后台 API",
-    version="1.0.0"
+    version="2.0.0"
 )
 
 app.add_middleware(
@@ -59,8 +59,11 @@ async def startup_event():
 
 @app.get("/")
 async def root():
+    scheme = get_database_scheme()
     return {
         "message": "MGAgent 管理台 API",
+        "version": "2.0.0",
+        "database_scheme": scheme.value,
         "endpoints": {
             "auth": "/admin/api/auth",
             "users": "/admin/api/users",
@@ -71,8 +74,26 @@ async def root():
             "knowledge_base": "/admin/api/knowledge-base",
             "vector_db": "/admin/api/vector-db",
             "dashboard": "/admin/api/dashboard",
-            "health": "/admin/api/health"
+            "health": "/admin/api/health",
+            "scheme": "/admin/api/scheme"
         }
+    }
+
+@app.get("/admin/api/scheme")
+async def get_current_scheme():
+    """获取当前数据库方案信息"""
+    return get_scheme_info()
+
+@app.get("/admin/api/health")
+async def health_check():
+    """健康检查"""
+    scheme_info = get_scheme_info()
+    return {
+        "status": "healthy",
+        "version": "2.0.0",
+        "database_scheme": scheme_info["scheme"],
+        "database_type": scheme_info["database"]["type"],
+        "vector_db_type": scheme_info["vector_database"]["type"]
     }
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ from typing import List, Optional
 import uuid
 import os
 import jwt
+import secrets
 from datetime import datetime, timedelta
 from app.db.crud import (
     create_chat_session, get_chat_session, get_chat_sessions,
@@ -16,17 +17,21 @@ from app.db.crud import (
     get_anonymous_chat_count, increment_anonymous_chat_count
 )
 from app.db.database import engine, get_db
-from app.config.settings import settings
+from app.config.config import settings
 from app.agent.core import enterprise_agent
 from app.rag.loader import DocumentLoader
 from app.rag.retriever import vector_retriever
-from app.config.settings import DOCUMENT_DIR
+from app.config.config import get_document_dir
 
 router = APIRouter()
 
-SECRET_KEY = settings.OPENAI_API_KEY[:32]
+# 从配置获取密钥，若不存在则自动生成
+SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
+
+# 文档目录
+DOCUMENT_DIR = get_document_dir()
 
 # get_db 已从 app.db.database 导入
 
@@ -252,10 +257,10 @@ async def chat(request: ChatRequest, db: SQLAlchemySession = Depends(get_db), us
         
         return ChatResponse(session_id=session.id, response=response)
     except ValueError as e:
-        if "未配置有效的模型" in str(e):
-            error_msg = "系统服务暂时不可用，请稍后再试"
+        if "未配置有效的模型" in str(e) or "未配置活跃的模型" in str(e):
+            error_msg = "系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试"
             add_message(db, session.id, "assistant", error_msg)
-            raise HTTPException(status_code=503, detail={"message": error_msg, "session_id": session.id})
+            raise HTTPException(status_code=503, detail={"message": error_msg, "session_id": session.id, "error_code": "MODEL_NOT_CONFIGURED"})
         raise
     except asyncio.TimeoutError:
         add_message(db, session.id, "assistant", "请求超时，请稍后重试")
@@ -305,10 +310,10 @@ async def chat_stream(request: ChatRequest, db: SQLAlchemySession = Depends(get_
         from app.agent.core import get_llm
         get_llm()
     except ValueError as e:
-        if "未配置有效的模型" in str(e):
-            error_msg = "系统服务暂时不可用，请稍后再试"
+        if "未配置有效的模型" in str(e) or "未配置活跃的模型" in str(e):
+            error_msg = "系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试"
             add_message(db, session.id, "assistant", error_msg)
-            raise HTTPException(status_code=503, detail={"message": error_msg, "session_id": session.id})
+            raise HTTPException(status_code=503, detail={"message": error_msg, "session_id": session.id, "error_code": "MODEL_NOT_CONFIGURED"})
         raise
     
     async def generate():
@@ -409,10 +414,10 @@ async def chat_with_file(
         
         return ChatResponse(session_id=session.id, response=response)
     except ValueError as e:
-        if "未配置有效的模型" in str(e):
-            error_msg = "系统服务暂时不可用，请稍后再试"
+        if "未配置有效的模型" in str(e) or "未配置活跃的模型" in str(e):
+            error_msg = "系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试"
             add_message(db, session.id, "assistant", error_msg)
-            raise HTTPException(status_code=503, detail={"message": error_msg, "session_id": session.id})
+            raise HTTPException(status_code=503, detail={"message": error_msg, "session_id": session.id, "error_code": "MODEL_NOT_CONFIGURED"})
         raise
     except asyncio.TimeoutError:
         add_message(db, session.id, "assistant", "请求超时，请稍后重试")

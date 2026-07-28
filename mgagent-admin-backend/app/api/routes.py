@@ -9,7 +9,8 @@ import bcrypt
 from datetime import datetime, timedelta
 from pathlib import Path
 from app.config.settings import settings, DATA_DIR, DOCUMENT_DIR, CHROMA_DIR
-from langchain_chroma import Chroma
+from app.services.model_config_service import get_embeddings_model, get_active_model_config, get_all_model_configs, create_model_config, update_model_config, delete_model_config, set_active_model_config
+from app.rag.vector_factory import get_vector_db
 
 router = APIRouter()
 
@@ -265,8 +266,8 @@ async def get_knowledge_base_stats(admin = Depends(get_current_admin)):
                 file_types[ext] = file_types.get(ext, 0) + 1
                 total_size += file.stat().st_size
         
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        total_chunks = chroma_client._collection.count()
+        vector_db = get_vector_db()
+        total_chunks = vector_db.get_total_count()
         
         return KnowledgeBaseStats(
             total_documents=total_chunks,
@@ -305,8 +306,12 @@ async def delete_document(filename: str, admin = Depends(get_current_admin)):
         if file_path.exists() and file_path.is_file():
             os.remove(file_path)
             
-            chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-            chroma_client._collection.delete(where={"source": str(file_path)})
+            vector_db = get_vector_db()
+            # 删除匹配的向量
+            chunks = vector_db.get_all_chunks()
+            ids_to_delete = [chunk["id"] for chunk in chunks if chunk.get("metadata", {}).get("source") == str(file_path)]
+            if ids_to_delete:
+                vector_db.delete_by_ids(ids_to_delete)
             
             return {"message": f"文档 {filename} 已删除"}
         else:
@@ -376,12 +381,8 @@ async def clear_knowledge_base(admin = Depends(get_current_admin)):
             if file.is_file():
                 os.remove(file)
         
-        if CHROMA_DIR.exists():
-            chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-            try:
-                chroma_client._collection.delete(where={})
-            except Exception:
-                pass
+        vector_db = get_vector_db()
+        vector_db.clear_all()
         
         return {"message": "知识库已清空"}
     except Exception as e:
@@ -401,7 +402,9 @@ async def upload_knowledge_base_document(file: UploadFile = File(...), admin = D
         with open(file_path, "wb") as f:
             f.write(await file.read())
         
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
+        # 使用配置的嵌入模型
+        embeddings = get_embeddings_model()
+        vector_db = get_vector_db()
         
         from langchain_community.document_loaders import PyPDFLoader, TextLoader
         from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -432,16 +435,13 @@ async def upload_knowledge_base_document(file: UploadFile = File(...), admin = D
         else:
             texts = splitter.split_documents(docs)
         
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        import numpy as np
+        # 使用配置的模型生成嵌入
+        text_contents = [t.page_content for t in texts]
+        embedded_texts = embeddings.embed_documents(text_contents)
+        metadatas = [{"source": str(file_path), "chunk": i} for i in range(len(texts))]
         
-        vectorizer = TfidfVectorizer(max_features=3000, ngram_range=(1, 2))
-        vectorizer.fit([t.page_content for t in texts])
-        
-        chroma_client.add_texts(
-            [t.page_content for t in texts],
-            metadatas=[{"source": str(file_path), "chunk": i} for i in range(len(texts))]
-        )
+        # 添加到向量数据库
+        vector_db.add_documents(texts, embedded_texts)
         
         return {
             "message": f"文档 {file.filename} 上传并索引成功",
@@ -456,13 +456,14 @@ async def upload_knowledge_base_document(file: UploadFile = File(...), admin = D
 @router.get("/vector-db/stats", response_model=VectorDBStats)
 async def get_vector_db_stats(admin = Depends(get_current_admin)):
     try:
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        total_chunks = chroma_client._collection.count()
+        vector_db = get_vector_db()
+        total_chunks = vector_db.get_total_count()
+        embeddings = get_embeddings_model()
         
         return VectorDBStats(
             total_chunks=total_chunks,
             persist_directory=str(CHROMA_DIR),
-            embedding_model="TF-IDF Embeddings"
+            embedding_model=type(embeddings).__name__
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -470,23 +471,18 @@ async def get_vector_db_stats(admin = Depends(get_current_admin)):
 @router.get("/vector-db/chunks", response_model=List[VectorChunk])
 async def list_vector_chunks(limit: int = 10, offset: int = 0, admin = Depends(get_current_admin)):
     try:
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        results = chroma_client._collection.get(
-            limit=limit,
-            offset=offset,
-            include=["documents", "metadatas", "embeddings"]
-        )
+        vector_db = get_vector_db()
+        all_chunks = vector_db.get_all_chunks()
+        
+        # 分页
+        paginated_chunks = all_chunks[offset:offset + limit]
         
         chunks = []
-        for i, (doc_id, content, metadata) in enumerate(zip(
-            results["ids"],
-            results["documents"],
-            results["metadatas"]
-        )):
+        for chunk in paginated_chunks:
             chunks.append(VectorChunk(
-                id=doc_id,
-                content=content,
-                metadata=metadata
+                id=chunk.get("id", ""),
+                content=chunk.get("content", ""),
+                metadata=chunk.get("metadata", {})
             ))
         
         return chunks
@@ -496,49 +492,36 @@ async def list_vector_chunks(limit: int = 10, offset: int = 0, admin = Depends(g
 @router.get("/vector-db/search")
 async def search_vector_db(query: str, k: int = 3, admin = Depends(get_current_admin)):
     try:
-        from sklearn.feature_extraction.text import TfidfVectorizer
-        import numpy as np
+        vector_db = get_vector_db()
+        embeddings = get_embeddings_model()
         
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        results = chroma_client._collection.get(include=["documents", "metadatas"])
+        # 使用配置的嵌入模型生成查询嵌入
+        query_embedding = embeddings.embed_query(query)
         
-        documents = results["documents"]
-        metadatas = results["metadatas"]
-        ids = results["ids"]
+        # 搜索
+        results = vector_db.similarity_search(query_embedding, k=k)
         
-        if not documents:
-            return {"results": [], "message": "向量库为空"}
-        
-        vectorizer = TfidfVectorizer(max_features=3000, ngram_range=(1, 2))
-        vectorizer.fit(documents)
-        
-        query_vec = vectorizer.transform([query]).toarray()[0]
-        doc_vecs = vectorizer.transform(documents).toarray()
-        
-        similarities = np.dot(doc_vecs, query_vec) / (
-            np.linalg.norm(doc_vecs, axis=1) * np.linalg.norm(query_vec)
-        )
-        
-        top_indices = np.argsort(similarities)[::-1][:k]
-        
-        results = []
-        for idx in top_indices:
-            results.append({
-                "id": ids[idx],
-                "content": documents[idx],
-                "metadata": metadatas[idx],
-                "similarity": float(similarities[idx])
+        search_results = []
+        for result in results:
+            search_results.append({
+                "id": result["id"],
+                "content": result["content"],
+                "metadata": result["metadata"],
+                "similarity": float(1 - result.get("distance", 0))
             })
         
-        return {"results": results}
+        if not search_results:
+            return {"results": [], "message": "未找到匹配的结果"}
+        
+        return {"results": search_results}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.delete("/vector-db/chunks/{chunk_id}")
 async def delete_vector_chunk(chunk_id: str, admin = Depends(get_current_admin)):
     try:
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        chroma_client._collection.delete(ids=[chunk_id])
+        vector_db = get_vector_db()
+        vector_db.delete_by_ids([chunk_id])
         
         return {"message": f"向量块 {chunk_id} 已删除"}
     except Exception as e:
@@ -547,8 +530,8 @@ async def delete_vector_chunk(chunk_id: str, admin = Depends(get_current_admin))
 @router.post("/vector-db/clear")
 async def clear_vector_db(admin = Depends(get_current_admin)):
     try:
-        chroma_client = Chroma(persist_directory=str(CHROMA_DIR))
-        chroma_client._collection.delete(where={})
+        vector_db = get_vector_db()
+        vector_db.clear_all()
         
         return {"message": "向量数据库已清空"}
     except Exception as e:
@@ -679,59 +662,79 @@ async def execute_query(request: QueryRequest, admin = Depends(get_current_admin
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.get("/model/config", response_model=ModelConfig)
+@router.get("/model/config")
 async def get_model_config(admin = Depends(get_current_admin)):
+    """获取当前活跃的模型配置，无配置时抛出异常"""
     try:
-        return ModelConfig(
-            api_key=settings.OPENAI_API_KEY[:4] + "****" + settings.OPENAI_API_KEY[-4:],
-            api_base=settings.OPENAI_API_BASE,
-            model=settings.OPENAI_MODEL
-        )
+        config = get_active_model_config()
+        return {
+            "id": config["id"],
+            "name": config["name"],
+            "api_key": config["api_key"][:4] + "****" + config["api_key"][-4:] if len(config["api_key"]) > 8 else "****",
+            "api_base": config["api_base"],
+            "model": config["model_name"],
+            "is_active": config["is_active"]
+        }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@router.put("/model/config")
-async def update_model_config(config: ModelConfig, admin = Depends(get_current_admin)):
+@router.get("/model/configs")
+async def list_model_configs(admin = Depends(get_current_admin)):
+    """获取所有模型配置列表"""
     try:
-        env_path = Path(".env")
-        if env_path.exists():
-            with open(env_path, "r") as f:
-                content = f.read()
-            
-            if config.api_key and config.api_key != settings.OPENAI_API_KEY:
-                content = content.replace(
-                    f"OPENAI_API_KEY={settings.OPENAI_API_KEY}",
-                    f"OPENAI_API_KEY={config.api_key}"
-                )
-            
-            if config.api_base:
-                content = content.replace(
-                    f"OPENAI_API_BASE={settings.OPENAI_API_BASE}",
-                    f"OPENAI_API_BASE={config.api_base}"
-                )
-            
-            if config.model:
-                content = content.replace(
-                    f"OPENAI_MODEL={settings.OPENAI_MODEL}",
-                    f"OPENAI_MODEL={config.model}"
-                )
-            
-            with open(env_path, "w") as f:
-                f.write(content)
-        
-        return {"message": "模型配置已更新"}
+        configs = get_all_model_configs()
+        return configs
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/model/configs")
+async def create_model_config(config_data: dict, admin = Depends(get_current_admin)):
+    """创建新的模型配置"""
+    try:
+        config = create_model_config(config_data)
+        return config
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/model/configs/{config_id}")
+async def update_model_config(config_id: str, config_data: dict, admin = Depends(get_current_admin)):
+    """更新模型配置"""
+    try:
+        config = update_model_config(config_id, config_data)
+        return config
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/model/configs/{config_id}")
+async def delete_model_config(config_id: str, admin = Depends(get_current_admin)):
+    """删除模型配置"""
+    try:
+        delete_model_config(config_id)
+        return {"message": "模型配置已删除"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/model/configs/{config_id}/activate")
+async def activate_model_config(config_id: str, admin = Depends(get_current_admin)):
+    """激活指定的模型配置"""
+    try:
+        set_active_model_config(config_id)
+        return {"message": "模型配置已激活"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/model/test")
 async def test_model_connection(admin = Depends(get_current_admin)):
+    """测试模型连接，无配置时抛出异常"""
     try:
+        config = get_active_model_config()
+        
         from langchain_openai import ChatOpenAI
         
         llm = ChatOpenAI(
-            model=settings.OPENAI_MODEL,
-            api_key=settings.OPENAI_API_KEY,
-            base_url=settings.OPENAI_API_BASE,
+            model=config["model_name"],
+            api_key=config["api_key"],
+            base_url=config["api_base"],
             temperature=0.1
         )
         
@@ -739,10 +742,11 @@ async def test_model_connection(admin = Depends(get_current_admin)):
         
         return {"status": "success", "response": response.content[:50]}
     except Exception as e:
-        return {"status": "failed", "error": str(e)}
+        raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/model/list", response_model=List[ModelInfo])
 async def list_available_models(admin = Depends(get_current_admin)):
+    """列出可用的模型类型"""
     models = [
         ModelInfo(
             name="deepseek-chat",

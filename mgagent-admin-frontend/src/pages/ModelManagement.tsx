@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Cpu, Save, RefreshCw, CheckCircle, XCircle, ExternalLink, Plus, Trash2, Power, Eye, EyeOff } from 'lucide-react'
 import Button from '../components/Button'
 import { modelApi } from '../api/client'
+import { toast, getErrorMessage } from '../components/Toast'
 import type { ModelConfig } from '../api/client'
 
 const ModelManagement = () => {
@@ -28,7 +29,7 @@ const ModelManagement = () => {
       const active = configsData.find(c => c.is_active)
       setActiveConfig(active || null)
     } catch (error) {
-      console.error('Failed to load model data:', error)
+      toast.error(`加载模型列表失败: ${getErrorMessage(error)}`)
     }
   }
 
@@ -43,16 +44,17 @@ const ModelManagement = () => {
       })
       setSaving(false)
       setShowEditModal(false)
+      toast.success('模型配置更新成功')
       loadData()
     } catch (error) {
-      console.error('Failed to save config:', error)
+      toast.error(`保存失败: ${getErrorMessage(error)}`)
       setSaving(false)
     }
   }
 
   const handleCreate = async () => {
     if (!newConfig.name || !newConfig.api_key || !newConfig.api_base || !newConfig.model_name) {
-      alert('请填写所有必填字段')
+      toast.warning('请填写所有必填字段')
       return
     }
     try {
@@ -61,9 +63,10 @@ const ModelManagement = () => {
       setSaving(false)
       setShowCreateModal(false)
       setNewConfig({ name: '', api_key: '', api_base: '', model_name: '' })
+      toast.success('模型配置创建成功')
       loadData()
     } catch (error) {
-      console.error('Failed to create config:', error)
+      toast.error(`创建失败: ${getErrorMessage(error)}`)
       setSaving(false)
     }
   }
@@ -74,29 +77,37 @@ const ModelManagement = () => {
       const result = await modelApi.testConnection()
       setTestResult(result)
       setTesting(false)
+      if (result.status === 'success') {
+        toast.success('模型连接测试成功')
+      } else {
+        toast.error('模型连接测试失败')
+      }
     } catch (error) {
-      console.error('Failed to test connection:', error)
-      setTestResult({ status: 'failed', error: '测试失败' })
+      const errorMsg = getErrorMessage(error)
+      setTestResult({ status: 'failed', error: errorMsg })
       setTesting(false)
+      toast.error(`连接测试失败: ${errorMsg}`)
     }
   }
 
   const handleActivate = async (configId: string) => {
     try {
       await modelApi.activateConfig(configId)
+      toast.success('模型已启用，主后端将立即感知到变更')
       loadData()
     } catch (error) {
-      console.error('Failed to activate config:', error)
+      toast.error(`启用失败: ${getErrorMessage(error)}`)
     }
   }
 
   const handleDeactivate = async (configId: string) => {
-    if (!window.confirm('确定要停用这个模型配置吗？停用后将没有启用的模型。')) return
+    if (!window.confirm('确定要停用这个模型配置吗？停用后将没有启用的模型，用户将无法使用聊天功能。')) return
     try {
       await modelApi.deactivateConfig(configId)
+      toast.warning('模型已停用，用户将无法使用聊天功能')
       loadData()
     } catch (error) {
-      console.error('Failed to deactivate config:', error)
+      toast.error(`停用失败: ${getErrorMessage(error)}`)
     }
   }
 
@@ -104,9 +115,10 @@ const ModelManagement = () => {
     if (!window.confirm('确定要删除这个模型配置吗？')) return
     try {
       await modelApi.deleteConfig(configId)
+      toast.success('模型配置已删除')
       loadData()
     } catch (error) {
-      console.error('Failed to delete config:', error)
+      toast.error(`删除失败: ${getErrorMessage(error)}`)
     }
   }
 

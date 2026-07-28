@@ -32,7 +32,8 @@ api.interceptors.response.use(
       localStorage.removeItem('admin_info')
       delete api.defaults.headers.common['Authorization']
     }
-    console.error('Admin API Error:', error)
+    const errorMsg = error.response?.data?.detail || error.message || '请求失败'
+    console.error('Admin API Error:', errorMsg)
     return Promise.reject(error)
   }
 )
@@ -310,22 +311,8 @@ export const storageDbApi = {
 
 export const modelApi = {
   getConfig: async (): Promise<ModelConfig> => {
-    try {
-      const response = await api.get('/model/config')
-      return response.data
-    } catch {
-      return {
-        id: '',
-        name: '',
-        api_key: '',
-        api_key_masked: '',
-        api_base: '',
-        model_name: '',
-        is_active: false,
-        created_at: '',
-        updated_at: ''
-      }
-    }
+    const response = await api.get('/model/config')
+    return response.data
   },
   
   getConfigs: async (): Promise<ModelConfig[]> => {

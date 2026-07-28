@@ -1,40 +1,83 @@
+"""
+数据库工厂 - Admin Backend
+支持 SQLite 和 MySQL
+"""
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from .models import Base
-from app.config.settings import settings
-
-# MySQL 连接配置
-DATABASE_URL = settings.DATABASE_URL
-
-# 创建引擎，添加 MySQL 特定配置
-engine = create_engine(
-    DATABASE_URL,
-    pool_pre_ping=True,  # 自动检测断开的连接
-    pool_recycle=3600,  # 每小时回收连接
-    pool_size=10,       # 连接池大小
-    max_overflow=20,    # 最大溢出连接数
-    echo=settings.DEBUG  # 调试模式下打印 SQL
+from sqlalchemy.pool import StaticPool
+from app.config.config import (
+    settings,
+    is_sqlite_scheme,
+    is_mysql_scheme,
+    get_database_url,
+    get_sqlite_path
 )
+from app.db.models import Base
+from typing import Generator
 
-SessionLocal = sessionmaker(
-    autocommit=False,
-    autoflush=False,
-    bind=engine
-)
+engine = None
+SessionLocal = None
+
+def _create_sqlite_engine():
+    """创建 SQLite 引擎"""
+    sqlite_path = get_sqlite_path()
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    return create_engine(
+        get_database_url(),
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+        echo=settings.DEBUG
+    )
+
+def _create_mysql_engine():
+    """创建 MySQL 引擎"""
+    return create_engine(
+        get_database_url(),
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        pool_size=10,
+        max_overflow=20,
+        echo=settings.DEBUG
+    )
+
+def init_engine():
+    """初始化数据库引擎"""
+    global engine, SessionLocal
+    
+    if is_mysql_scheme():
+        engine = _create_mysql_engine()
+    else:
+        engine = _create_sqlite_engine()
+    
+    SessionLocal = sessionmaker(
+        autocommit=False,
+        autoflush=False,
+        bind=engine
+    )
+    
+    return engine
 
 def init_db():
     """初始化数据库表结构"""
+    global engine
+    if engine is None:
+        engine = init_engine()
     Base.metadata.create_all(bind=engine)
 
-def get_db():
-    """获取数据库会话的依赖函数"""
+def get_db() -> Generator[Session, None, None]:
+    """获取数据库会话"""
+    global SessionLocal
+    if SessionLocal is None:
+        init_engine()
+    
     db = SessionLocal()
     try:
         yield db
     finally:
         db.close()
 
-def get_session(db: Session = None):
+def get_session(db: Session = None) -> Session:
     """获取或创建数据库会话"""
     if db:
         return db

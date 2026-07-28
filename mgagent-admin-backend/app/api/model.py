@@ -79,10 +79,10 @@ async def get_active_model_config(
 
 @router.get("/model/config/public")
 async def get_public_model_config(db: Session = Depends(get_db)):
-    """供外部服务访问的模型配置接口（无需认证）"""
+    """供外部服务访问的模型配置接口（无需认证），无配置时抛出异常"""
     configs = get_model_configs(db, is_active=True)
     if not configs:
-        return None
+        raise HTTPException(status_code=404, detail="未配置任何模型，请在admin管理端配置并启用模型")
     
     config = configs[0]
     return {

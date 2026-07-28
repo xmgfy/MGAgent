@@ -2,10 +2,6 @@ from pydantic_settings import BaseSettings
 from pathlib import Path
 
 class Settings(BaseSettings):
-    OPENAI_API_KEY: str = ""
-    OPENAI_API_BASE: str = "https://api.openai.com/v1"
-    OPENAI_MODEL: str = "gpt-4o-mini"
-    
     DOCUMENT_DIR: str = "../mgagent-backend/data/documents"
     
     # MySQL 数据库配置 - 与 mgagent-backend 共享同一数据库

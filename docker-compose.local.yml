@@ -1,0 +1,113 @@
+# 方案1: SQLite + ChromaDB 配置
+# 适用于单机本地调试运行，无需外部数据库服务
+
+services:
+  # MGAgent Backend - 智能客服助手后端
+  mgagent-backend:
+    build:
+      context: ./mgagent-backend
+      dockerfile: Dockerfile
+    container_name: mgagent-backend
+    restart: unless-stopped
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DATABASE_SCHEME=sqlite
+      - SQLITE_DB_PATH=./data/sqlite/app.db
+      - CHROMA_PATH=./data/chroma
+      - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
+      - DEBUG=True
+      # ChromaDB 在 sqlite 模式下不需要外部连接
+      - MILVUS_HOST=localhost
+      - MILVUS_PORT=19530
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - ./mgagent-backend/data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mgagent-network
+
+  # MGAgent Admin Backend - 管理台后端
+  mgagent-admin-backend:
+    build:
+      context: ./mgagent-admin-backend
+      dockerfile: Dockerfile
+    container_name: mgagent-admin-backend
+    restart: unless-stopped
+    environment:
+      - ADMIN_API_HOST=0.0.0.0
+      - ADMIN_API_PORT=8001
+      - DATABASE_SCHEME=sqlite
+      - SQLITE_DB_PATH=./data/sqlite/app.db
+      - CHROMA_PATH=./data/chroma
+      - DEBUG=True
+      # ChromaDB 在 sqlite 模式下不需要外部连接
+      - MILVUS_HOST=localhost
+      - MILVUS_PORT=19530
+    ports:
+      - "${ADMIN_BACKEND_PORT:-8001}:8001"
+    volumes:
+      - ./mgagent-admin-backend/data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/admin/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - mgagent-network
+
+  # MGAgent Frontend - 智能客服助手前端
+  mgagent-frontend:
+    build:
+      context: ./mgagent-frontend
+      dockerfile: Dockerfile
+    container_name: mgagent-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - mgagent-backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mgagent-network
+
+  # MGAgent Admin Frontend - 管理台前端
+  mgagent-admin-frontend:
+    build:
+      context: ./mgagent-admin-frontend
+      dockerfile: Dockerfile
+    container_name: mgagent-admin-frontend
+    restart: unless-stopped
+    ports:
+      - "${ADMIN_FRONTEND_PORT:-3001}:80"
+    depends_on:
+      mgagent-admin-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mgagent-network
+
+volumes:
+  backend_data:
+    driver: local
+
+networks:
+  mgagent-network:
+    driver: bridge
