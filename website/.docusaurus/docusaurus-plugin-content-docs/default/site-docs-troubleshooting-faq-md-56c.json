@@ -1,0 +1,27 @@
+{
+  "id": "troubleshooting/faq",
+  "title": "常见问题",
+  "description": "MGAgent 使用过程中常见问题解答，涵盖部署、配置、功能等方面",
+  "source": "@site/docs/troubleshooting/faq.md",
+  "sourceDirName": "troubleshooting",
+  "slug": "/troubleshooting/faq",
+  "permalink": "/docs/troubleshooting/faq",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "常见问题",
+    "description": "MGAgent 使用过程中常见问题解答，涵盖部署、配置、功能等方面",
+    "slug": "/troubleshooting/faq"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Docker 配置",
+    "permalink": "/docs/configuration/docker"
+  },
+  "next": {
+    "title": "故障排查",
+    "permalink": "/docs/troubleshooting/common-issues"
+  }
+}

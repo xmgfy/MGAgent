@@ -1,0 +1,27 @@
+{
+  "id": "configuration/nginx",
+  "title": "Nginx 配置",
+  "description": "MGAgent Nginx 反向代理配置，包括前端部署、API 代理和 HTTPS 设置",
+  "source": "@site/docs/configuration/nginx.md",
+  "sourceDirName": "configuration",
+  "slug": "/configuration/nginx",
+  "permalink": "/docs/configuration/nginx",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Nginx 配置",
+    "description": "MGAgent Nginx 反向代理配置，包括前端部署、API 代理和 HTTPS 设置",
+    "slug": "/configuration/nginx"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "环境变量配置",
+    "permalink": "/docs/configuration/environment-variables"
+  },
+  "next": {
+    "title": "Docker 配置",
+    "permalink": "/docs/configuration/docker"
+  }
+}

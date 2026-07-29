@@ -135,5 +135,12 @@ class VectorRetriever:
         return self.vector_db.get_total_count()
 
 
-# 创建全局实例
-vector_retriever = VectorRetriever()
+# 全局实例（惰性初始化）
+_vector_retriever = None
+
+def get_vector_retriever():
+    """获取全局 VectorRetriever 实例（惰性初始化）"""
+    global _vector_retriever
+    if _vector_retriever is None:
+        _vector_retriever = VectorRetriever()
+    return _vector_retriever

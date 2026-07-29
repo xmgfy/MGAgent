@@ -1,0 +1,27 @@
+{
+  "id": "development/project-structure",
+  "title": "项目结构",
+  "description": "MGAgent 项目目录结构、关键文件说明和代码组织方式",
+  "source": "@site/docs/development/project-structure.md",
+  "sourceDirName": "development",
+  "slug": "/development/project-structure",
+  "permalink": "/docs/development/project-structure",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "项目结构",
+    "description": "MGAgent 项目目录结构、关键文件说明和代码组织方式",
+    "slug": "/development/project-structure"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "生产部署",
+    "permalink": "/docs/deployment/production-deployment"
+  },
+  "next": {
+    "title": "脚本使用指南",
+    "permalink": "/docs/development/scripts"
+  }
+}

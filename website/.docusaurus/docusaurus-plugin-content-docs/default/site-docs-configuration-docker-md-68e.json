@@ -1,0 +1,27 @@
+{
+  "id": "configuration/docker",
+  "title": "Docker 配置",
+  "description": "MGAgent Docker Compose 配置详解，包括镜像源、网络、数据卷等",
+  "source": "@site/docs/configuration/docker.md",
+  "sourceDirName": "configuration",
+  "slug": "/configuration/docker",
+  "permalink": "/docs/configuration/docker",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Docker 配置",
+    "description": "MGAgent Docker Compose 配置详解，包括镜像源、网络、数据卷等",
+    "slug": "/configuration/docker"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Nginx 配置",
+    "permalink": "/docs/configuration/nginx"
+  },
+  "next": {
+    "title": "常见问题",
+    "permalink": "/docs/troubleshooting/faq"
+  }
+}

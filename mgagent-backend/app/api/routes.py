@@ -20,7 +20,7 @@ from app.db.database import engine, get_db
 from app.config.config import settings
 from app.agent.core import enterprise_agent
 from app.rag.loader import DocumentLoader
-from app.rag.retriever import vector_retriever
+from app.rag.retriever import get_vector_retriever
 from app.config.config import get_document_dir
 
 router = APIRouter()
@@ -496,7 +496,7 @@ async def upload_document(file: UploadFile = File(...), db: SQLAlchemySession = 
     try:
         loader = DocumentLoader()
         docs = loader.load_file(file_path)
-        vector_retriever.add_documents(docs)
+        get_vector_retriever().add_documents(docs)
         update_document_status(db, document.id, "indexed")
     except Exception as e:
         update_document_status(db, document.id, "error")

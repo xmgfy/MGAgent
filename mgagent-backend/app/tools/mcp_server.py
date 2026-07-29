@@ -1,7 +1,7 @@
 from mcp import MCP, MCPConfig
 from app.tools.calculator import calculate
 from app.tools.sql_query import query_database, list_tables, describe_table
-from app.rag.retriever import vector_retriever
+from app.rag.retriever import get_vector_retriever
 
 mcp_config = MCPConfig(name="MGAgent MCP Server", version="1.0.0")
 
@@ -24,7 +24,7 @@ class MGAgentMCP(MCP):
     
     @MCP.tool("rag_retrieve", description="检索知识库")
     def rag_retrieve(self, query: str) -> str:
-        docs = vector_retriever.search(query, k=3)
+        docs = get_vector_retriever().search(query, k=3)
         if not docs:
             return "未找到相关文档"
         

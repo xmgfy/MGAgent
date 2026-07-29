@@ -1,0 +1,121 @@
+# MGAgent 应用层服务 (MySQL + Milvus 方案)
+# 仅包含后端和前端应用，连接已启动的基础设施
+# 使用前需先启动基础设施: docker compose -f docker-compose.infra.yml up -d
+
+services:
+  # MGAgent Backend - 智能客服助手后端
+  mgagent-backend:
+    build:
+      context: ./mgagent-backend
+      dockerfile: Dockerfile
+    container_name: mgagent-backend
+    restart: always
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - DATABASE_SCHEME=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-mgagent}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mgagent_password_2024}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mgagent}
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+      - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
+      - DEBUG=False
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - mgagent-network
+
+  # MGAgent Admin Backend - 管理台后端
+  mgagent-admin-backend:
+    build:
+      context: ./mgagent-admin-backend
+      dockerfile: Dockerfile
+    container_name: mgagent-admin-backend
+    restart: always
+    environment:
+      - ADMIN_API_HOST=0.0.0.0
+      - ADMIN_API_PORT=8001
+      - DATABASE_SCHEME=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-mgagent}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mgagent_password_2024}
+      - MYSQL_DATABASE=${MYSQL_DATABASE:-mgagent}
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+      - DEBUG=False
+    ports:
+      - "${ADMIN_BACKEND_PORT:-8001}:8001"
+    volumes:
+      - admin_backend_data:/app/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/admin/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    networks:
+      - mgagent-network
+
+  # MGAgent Frontend - 智能客服助手前端
+  mgagent-frontend:
+    build:
+      context: ./mgagent-frontend
+      dockerfile: Dockerfile
+    container_name: mgagent-frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - mgagent-backend
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mgagent-network
+
+  # MGAgent Admin Frontend - 管理台前端
+  mgagent-admin-frontend:
+    build:
+      context: ./mgagent-admin-frontend
+      dockerfile: Dockerfile
+    container_name: mgagent-admin-frontend
+    restart: always
+    ports:
+      - "${ADMIN_FRONTEND_PORT:-3001}:80"
+    depends_on:
+      mgagent-admin-backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    networks:
+      - mgagent-network
+
+volumes:
+  backend_data:
+    driver: local
+  admin_backend_data:
+    driver: local
+
+networks:
+  mgagent-network:
+    external: true
+    name: mgagent-network

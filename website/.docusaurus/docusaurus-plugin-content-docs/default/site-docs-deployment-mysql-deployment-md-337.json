@@ -1,0 +1,27 @@
+{
+  "id": "deployment/mysql-deployment",
+  "title": "MySQL 方案部署",
+  "description": "MGAgent MySQL + Milvus 方案分层部署指南，包括基础设施和应用层",
+  "source": "@site/docs/deployment/mysql-deployment.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/mysql-deployment",
+  "permalink": "/docs/deployment/mysql-deployment",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "MySQL 方案部署",
+    "description": "MGAgent MySQL + Milvus 方案分层部署指南，包括基础设施和应用层",
+    "slug": "/deployment/mysql-deployment"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "Docker 部署",
+    "permalink": "/docs/deployment/docker-deployment"
+  },
+  "next": {
+    "title": "生产部署",
+    "permalink": "/docs/deployment/production-deployment"
+  }
+}

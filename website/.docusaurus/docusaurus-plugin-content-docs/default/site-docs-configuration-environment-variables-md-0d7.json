@@ -1,0 +1,27 @@
+{
+  "id": "configuration/environment-variables",
+  "title": "环境变量配置",
+  "description": "MGAgent 所有环境变量的详细说明、默认值和使用方法",
+  "source": "@site/docs/configuration/environment-variables.md",
+  "sourceDirName": "configuration",
+  "slug": "/configuration/environment-variables",
+  "permalink": "/docs/configuration/environment-variables",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "环境变量配置",
+    "description": "MGAgent 所有环境变量的详细说明、默认值和使用方法",
+    "slug": "/configuration/environment-variables"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "API 参考",
+    "permalink": "/docs/development/api-reference"
+  },
+  "next": {
+    "title": "Nginx 配置",
+    "permalink": "/docs/configuration/nginx"
+  }
+}

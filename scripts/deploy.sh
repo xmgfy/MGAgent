@@ -3,7 +3,7 @@
 # MGAgent 一键部署脚本
 # 支持两套技术栈方案：
 #   方案1: SQLite + ChromaDB (docker-compose.local.yml)
-#   方案2: MySQL + Milvus (docker-compose.prod.yml)
+#   方案2: MySQL + Milvus (docker-compose.infra.yml + docker-compose.mysql-app.yml)
 
 set -e
 
@@ -71,8 +71,8 @@ show_usage() {
     echo "  ./scripts/deploy.sh [选项]"
     echo ""
     echo "选项:"
-    echo "  sqlite      启动 SQLite + ChromaDB 方案"
-    echo "  mysql       启动 MySQL + Milvus 方案"
+    echo "  sqlite      启动 SQLite + ChromaDB 方案（轻量级，无需外部数据库）"
+    echo "  mysql       启动 MySQL + Milvus 方案（先启动基础设施，再启动应用）"
     echo "  stop        停止所有服务"
     echo "  restart     重启所有服务"
     echo "  logs        查看服务日志"
@@ -141,11 +141,26 @@ start_mysql() {
         create_default_env_prod
     fi
     
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" build --no-cache
+    # 第一步：启动基础设施服务
+    print_info "第一步：启动 MySQL + Milvus 基础设施..."
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" down 2>/dev/null || true
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" up -d
     
-    print_info "镜像构建完成，正在启动服务..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" up -d
+    print_info "等待基础设施就绪 (约 20 秒)..."
+    sleep 20
+    
+    # 检查基础设施状态
+    if ! $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" ps | grep -q "healthy"; then
+        print_warning "部分基础设施可能尚未完全就绪，继续部署应用..."
+    fi
+    
+    # 第二步：启动应用层服务
+    print_info "第二步：构建并启动应用层服务..."
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" down 2>/dev/null || true
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" build --no-cache
+    
+    print_info "镜像构建完成，正在启动应用服务..."
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" up -d
     
     print_success_message "MySQL + Milvus"
 }
@@ -207,7 +222,8 @@ stop_services() {
     COMPOSE_CMD=$(get_compose_cmd)
     
     $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" down 2>/dev/null || true
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" down 2>/dev/null || true
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" down 2>/dev/null || true
     
     print_info "所有服务已停止"
 }
@@ -238,7 +254,12 @@ show_logs() {
     if [ "$scheme" == "sqlite" ]; then
         $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" logs -f --tail=100
     else
-        $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" logs -f --tail=100
+        print_info "基础设施日志:"
+        $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" logs -f --tail=50 &
+        local infra_pid=$!
+        print_info "应用层日志:"
+        $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" logs -f --tail=50
+        kill $infra_pid 2>/dev/null || true
     fi
 }
 
@@ -253,10 +274,16 @@ show_status() {
     $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" ps 2>/dev/null || echo "  未运行"
     
     echo ""
-    echo -e "${BLUE}MySQL + Milvus 方案状态:${NC}"
+    echo -e "${BLUE}MySQL + Milvus 基础设施状态:${NC}"
     echo ""
     
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" ps 2>/dev/null || echo "  未运行"
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" ps 2>/dev/null || echo "  未运行"
+    
+    echo ""
+    echo -e "${BLUE}MySQL + Milvus 应用层状态:${NC}"
+    echo ""
+    
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" ps 2>/dev/null || echo "  未运行"
 }
 
 # 清理所有数据
@@ -276,8 +303,11 @@ cleanup_all() {
     print_info "正在清理 SQLite + ChromaDB 方案..."
     $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" down -v 2>/dev/null || true
     
-    print_info "正在清理 MySQL + Milvus 方案..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.prod.yml" down -v 2>/dev/null || true
+    print_info "正在清理 MySQL + Milvus 应用层..."
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" down -v 2>/dev/null || true
+    
+    print_info "正在清理 MySQL + Milvus 基础设施..."
+    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" down -v 2>/dev/null || true
     
     print_info "正在清理未使用的 Docker 资源..."
     docker system prune -f 2>/dev/null || true

@@ -24,7 +24,7 @@ CREATE TABLE IF NOT EXISTS admins (
     id VARCHAR(36) PRIMARY KEY,
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL,
-    password VARCHAR(255) NOT NULL,
+    hashed_password VARCHAR(255) NOT NULL,
     role VARCHAR(50) DEFAULT 'tenant_admin',
     tenant_id VARCHAR(36),
     status VARCHAR(50) DEFAULT 'active',
@@ -51,7 +51,7 @@ CREATE TABLE IF NOT EXISTS users (
     tenant_id VARCHAR(36),
     username VARCHAR(255) NOT NULL UNIQUE,
     email VARCHAR(255),
-    password VARCHAR(255),
+    hashed_password VARCHAR(255),
     role VARCHAR(50) DEFAULT 'user',
     status VARCHAR(50) DEFAULT 'active',
     chat_count INT DEFAULT 0,
@@ -129,6 +129,6 @@ CREATE TABLE IF NOT EXISTS anonymous_stats (
 
 -- 插入默认平台管理员 (用户名: admin, 密码: admin123)
 -- 注意: 实际密码需要通过 bcrypt 加密
-INSERT INTO admins (id, username, email, password, role, status)
+INSERT INTO admins (id, username, email, hashed_password, role, status)
 VALUES ('admin-001', 'admin', 'admin@mgagent.com', '$2b$12$LJ3m4ys3MqKJ3XQmHX2F4Ob6vG6k5Lxq8E9i6v3N5oQjPf7KbFzWy', 'platform_admin', 'active')
 ON DUPLICATE KEY UPDATE username=username;

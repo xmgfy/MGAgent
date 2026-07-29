@@ -1,0 +1,27 @@
+{
+  "id": "deployment/docker-deployment",
+  "title": "Docker 部署",
+  "description": "MGAgent 使用 Docker Compose 部署的完整指南，包括 SQLite 和 MySQL 两种方案",
+  "source": "@site/docs/deployment/docker-deployment.md",
+  "sourceDirName": "deployment",
+  "slug": "/deployment/docker-deployment",
+  "permalink": "/docs/deployment/docker-deployment",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "Docker 部署",
+    "description": "MGAgent 使用 Docker Compose 部署的完整指南，包括 SQLite 和 MySQL 两种方案",
+    "slug": "/deployment/docker-deployment"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "本地开发部署",
+    "permalink": "/docs/deployment/local-development"
+  },
+  "next": {
+    "title": "MySQL 方案部署",
+    "permalink": "/docs/deployment/mysql-deployment"
+  }
+}

@@ -15,8 +15,7 @@
 | `stop-all.sh` | 本地开发 | 停止本地服务 |
 | `status.sh` | 本地开发 | 检查服务状态 |
 | `deploy.sh` | 生产部署 | Docker 容器化部署 |
-| `docker-services.sh` | Docker 服务 | 数据库服务管理 |
-| `migrate_data.py` | 数据迁移 | 方案切换时的数据迁移 |
+| `docker-services.sh` | Docker 服务 | 基础设施服务管理 |
 | `git-sync.sh` | Git 辅助 | 代码同步（本地工具，不纳入版本控制） |
 
 ---
@@ -138,14 +137,14 @@ chmod +x scripts/init.sh
 
 ---
 
-## 🐳 阶段三：Docker 数据库服务管理
+## 🐳 阶段三：Docker 基础设施服务管理
 
-当需要使用 **MySQL + Milvus 方案** 时，需要先启动数据库服务。
+`docker-services.sh` **仅管理基础设施服务**（MySQL + Milvus），应用层服务请使用 `deploy.sh`。
 
-### `scripts/docker-services.sh` — Docker 服务管理
+### `scripts/docker-services.sh` — 基础设施管理
 
 **适用场景**：
-- 本地调试 MySQL + Milvus 方案
+- 本地调试 MySQL + Milvus 方案时，先启动数据库服务
 - 为生产部署预热镜像
 - 配置国内 Docker 镜像源加速
 
@@ -161,26 +160,23 @@ chmod +x scripts/init.sh
 # 预热镜像（提前拉取所需镜像）
 ./scripts/docker-services.sh preload
 
-# 启动 MySQL + Milvus 服务
+# 启动 MySQL + Milvus 基础设施服务
 ./scripts/docker-services.sh start
 
-# 停止服务
+# 停止基础设施服务
 ./scripts/docker-services.sh stop
 
-# 重启服务
+# 重启基础设施服务
 ./scripts/docker-services.sh restart
 
-# 查看服务状态
+# 查看基础设施服务状态
 ./scripts/docker-services.sh status
 
-# 查看日志
+# 查看基础设施服务日志
 ./scripts/docker-services.sh logs
-
-# 执行数据迁移
-./scripts/docker-services.sh migrate
 ```
 
-**包含的 Docker 容器**：
+**包含的 Docker 容器（5 个基础设施服务）**：
 
 | 容器 | 镜像 | 说明 |
 |------|------|------|
@@ -189,6 +185,8 @@ chmod +x scripts/init.sh
 | etcd | `quay.io/coreos/etcd:v3.5.5` | Milvus 元数据存储 |
 | MinIO | `minio/minio:RELEASE.2023-03-20` | Milvus 对象存储 |
 | Attu | `zilliz/attu:v2.4` | Milvus 可视化管理 |
+
+**Compose 文件**：`docker-compose.infra.yml`
 
 **国内镜像加速**：
 
@@ -205,13 +203,28 @@ chmod +x scripts/init.sh
 2. 若失败，逐个尝试国内镜像源代理拉取
 3. 若全部失败，最后尝试直接从 Docker Hub 拉取
 
+> ⚠️ **重要**：`docker-services.sh` 只管理基础设施，不包含后端和前端应用。应用层服务请使用 `./scripts/deploy.sh mysql` 部署。
+
 ---
 
 ## 🚀 阶段四：生产部署交付
 
-### `scripts/deploy.sh` — 一键部署
+### `scripts/deploy.sh` — 一键部署（应用层 + 基础设施）
 
-**适用场景**：生产环境完整部署，一键拉起整套应用（含数据库 + 后端 + 前端）。
+**适用场景**：生产环境完整部署，一键拉起整套应用。
+
+**架构说明**：
+
+| 层级 | Compose 文件 | 包含服务 |
+|------|-------------|----------|
+| 基础设施 | `docker-compose.infra.yml` | MySQL + Milvus + etcd + MinIO + Attu |
+| 应用层 (sqlite) | `docker-compose.local.yml` | 后端 × 2 + 前端 × 2（内嵌 SQLite + ChromaDB） |
+| 应用层 (mysql) | `docker-compose.mysql-app.yml` | 后端 × 2 + 前端 × 2（连接外部 MySQL + Milvus） |
+
+**MySQL 方案部署流程**：
+1. 先启动基础设施（`docker-compose.infra.yml`）
+2. 等待基础设施就绪（约 20 秒）
+3. 构建并启动应用层（`docker-compose.mysql-app.yml`）
 
 **使用方法**：
 
@@ -234,7 +247,7 @@ chmod +x scripts/deploy.sh
 ./scripts/deploy.sh mysql       # 启动 MySQL + Milvus 方案
 ./scripts/deploy.sh stop        # 停止所有服务
 ./scripts/deploy.sh restart     # 重启服务（交互式选择方案）
-./scripts/deploy.sh status      # 查看服务状态
+./scripts/deploy.sh status      # 查看服务状态（含基础设施 + 应用层）
 ./scripts/deploy.sh logs        # 查看实时日志
 ./scripts/deploy.sh cleanup     # 清理所有容器和数据卷（不可恢复）
 ```
@@ -247,7 +260,7 @@ chmod +x scripts/deploy.sh
 | 向量数据库 | ChromaDB（内嵌） | Milvus 2.4（容器） |
 | 部署复杂度 | 低 | 中 |
 | 适用场景 | 单机小规模 | 大规模生产 |
-| Compose 文件 | `docker-compose.local.yml` | `docker-compose.prod.yml` |
+| Compose 文件 | `docker-compose.local.yml` | `docker-compose.infra.yml` + `docker-compose.mysql-app.yml` |
 
 **端口映射**：
 
@@ -266,32 +279,6 @@ chmod +x scripts/deploy.sh
 Admin 账号: admin / admin123
 MySQL 账号: mgagent / mgagent_password_2024
 ```
-
----
-
-## 🔄 阶段五：数据迁移
-
-### `scripts/migrate_data.py` — 数据迁移
-
-**适用场景**：从 SQLite + ChromaDB 方案切换到 MySQL + Milvus 方案时，需要迁移历史数据。
-
-**使用方法**：
-
-```bash
-# 方式一：通过 docker-services.sh 调用
-./scripts/docker-services.sh migrate
-
-# 方式二：直接执行
-python3 scripts/migrate_data.py
-```
-
-**迁移内容**：
-- SQLite 表数据 → MySQL 对应表
-- ChromaDB 向量数据 → Milvus 集合
-
-**前置条件**：
-- 目标 MySQL 和 Milvus 服务已启动
-- `DATABASE_SCHEME` 已设置为 `mysql`
 
 ---
 
@@ -339,7 +326,9 @@ python3 scripts/migrate_data.py
 │  │  2b. ./scripts/docker-services.sh preload                │       │
 │  │      预热所需镜像                                        │       │
 │  │  2c. ./scripts/docker-services.sh start                 │       │
-│  │      启动 MySQL + Milvus 服务                            │       │
+│  │      启动 MySQL + Milvus 基础设施                        │       │
+│  │  2d. ./scripts/deploy.sh mysql                          │       │
+│  │      启动应用层服务（连接基础设施）                      │       │
 │  └─────────────────────────────────────────────────────────┘       │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
@@ -348,14 +337,16 @@ python3 scripts/migrate_data.py
 │                     生产部署交付路线                                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │                                                                     │
-│  1. ./scripts/docker-services.sh setup-mirror  配置镜像源（推荐）   │
-│  2. ./scripts/deploy.sh sqlite|mysql            选择方案部署        │
-│  3. ./scripts/deploy.sh status                  检查服务状态        │
-│  4. ./scripts/deploy.sh logs                    查看运行日志        │
-│  5. ./scripts/deploy.sh stop                    停止服务           │
+│  方式一：一键部署（推荐）                                           │
+│  1. ./scripts/deploy.sh sqlite   SQLite + ChromaDB 方案             │
+│     或 ./scripts/deploy.sh mysql  MySQL + Milvus 方案               │
+│  2. ./scripts/deploy.sh status   检查服务状态                      │
+│  3. ./scripts/deploy.sh logs     查看运行日志                      │
+│  4. ./scripts/deploy.sh stop     停止服务                           │
 │                                                                     │
-│  数据迁移:                                                          │
-│  python3 scripts/migrate_data.py                SQLite → MySQL     │
+│  方式二：分层部署（MySQL 方案）                                     │
+│  1. ./scripts/docker-services.sh start  启动基础设施                │
+│  2. ./scripts/deploy.sh mysql           启动应用层                  │
 │                                                                     │
 └─────────────────────────────────────────────────────────────────────┘
 ```

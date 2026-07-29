@@ -1,0 +1,27 @@
+{
+  "id": "development/scripts",
+  "title": "脚本使用指南",
+  "description": "MGAgent 所有工具脚本的详细使用说明和适用场景",
+  "source": "@site/docs/development/scripts.md",
+  "sourceDirName": "development",
+  "slug": "/development/scripts",
+  "permalink": "/docs/development/scripts",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "脚本使用指南",
+    "description": "MGAgent 所有工具脚本的详细使用说明和适用场景",
+    "slug": "/development/scripts"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "项目结构",
+    "permalink": "/docs/development/project-structure"
+  },
+  "next": {
+    "title": "API 参考",
+    "permalink": "/docs/development/api-reference"
+  }
+}

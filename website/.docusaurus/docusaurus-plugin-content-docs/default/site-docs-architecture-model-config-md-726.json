@@ -1,0 +1,27 @@
+{
+  "id": "architecture/model-config",
+  "title": "模型配置",
+  "description": "MGAgent 大模型配置管理、动态加载与配置变更即时刷新机制",
+  "source": "@site/docs/architecture/model-config.md",
+  "sourceDirName": "architecture",
+  "slug": "/architecture/model-config",
+  "permalink": "/docs/architecture/model-config",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "模型配置",
+    "description": "MGAgent 大模型配置管理、动态加载与配置变更即时刷新机制",
+    "slug": "/architecture/model-config"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "数据库设计",
+    "permalink": "/docs/architecture/database"
+  },
+  "next": {
+    "title": "本地开发部署",
+    "permalink": "/docs/deployment/local-development"
+  }
+}

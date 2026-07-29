@@ -1,0 +1,27 @@
+{
+  "id": "getting-started/quick-start",
+  "title": "快速开始",
+  "description": "MGAgent 快速上手指南，包括 Docker 部署和本地开发两种模式",
+  "source": "@site/docs/getting-started/quick-start.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/quick-start",
+  "permalink": "/docs/getting-started/quick-start",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "快速开始",
+    "description": "MGAgent 快速上手指南，包括 Docker 部署和本地开发两种模式",
+    "slug": "/getting-started/quick-start"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "安装指南",
+    "permalink": "/docs/getting-started/installation"
+  },
+  "next": {
+    "title": "配置说明",
+    "permalink": "/docs/getting-started/configuration"
+  }
+}

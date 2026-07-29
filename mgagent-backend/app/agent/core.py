@@ -4,7 +4,7 @@ from langchain_core.messages import HumanMessage, AIMessage, ToolMessage
 from typing import List, Dict, Optional
 from datetime import datetime
 from app.config.settings import settings, get_active_model_config
-from app.rag.retriever import vector_retriever
+from app.rag.retriever import get_vector_retriever
 from app.tools.calculator import calculate
 from app.tools.sql_query import query_database, list_tables, describe_table
 import json
@@ -53,7 +53,7 @@ class EnterpriseAgent:
         }
     
     def _rag_retrieve(self, query: str) -> str:
-        docs = vector_retriever.search(query, k=3)
+        docs = get_vector_retriever().search(query, k=3)
         if not docs:
             return "未找到相关文档"
         

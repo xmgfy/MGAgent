@@ -1,6 +1,7 @@
 #!/bin/bash
-# MGAgent Docker 服务管理脚本
-# 用于启动/停止 MySQL 和 Milvus 服务，支持国内镜像源加速
+# MGAgent Docker 基础设施服务管理脚本
+# 仅管理 MySQL + Milvus 基础设施服务
+# 应用层服务请使用 ./scripts/deploy.sh 管理
 
 set -e
 
@@ -12,7 +13,7 @@ CYAN='\033[0;36m'
 NC='\033[0m'
 
 PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-COMPOSE_FILE="$PROJECT_ROOT/docker-compose.yml"
+COMPOSE_FILE="$PROJECT_ROOT/docker-compose.infra.yml"
 ENV_FILE="$PROJECT_ROOT/.env.docker"
 DAEMON_JSON="$HOME/.docker/daemon.json"
 
@@ -30,7 +31,7 @@ MIRROR_SOURCES=(
 MYSQL_MILVUS_IMAGES=(
     "mysql:8.0"
     "milvusdb/milvus:v2.4.12"
-    "docker.1ms.run/quay.io/coreos/etcd:v3.5.5"
+    "quay.io/coreos/etcd:v3.5.5"
     "minio/minio:RELEASE.2023-03-20T20-16-18Z"
     "zilliz/attu:v2.4"
 )
@@ -43,20 +44,21 @@ BUILD_IMAGES=(
 )
 
 show_help() {
-    echo -e "${BLUE}MGAgent Docker 服务管理${NC}"
+    echo -e "${BLUE}MGAgent 基础设施服务管理${NC}"
     echo "用法: $0 <命令>"
     echo ""
     echo "命令列表:"
-    echo "  start       启动 MySQL 和 Milvus 服务"
-    echo "  stop        停止所有服务"
-    echo "  restart     重启所有服务"
-    echo "  status      查看服务状态"
-    echo "  logs        查看服务日志"
-    echo "  migrate     执行数据迁移"
-    echo "  preload     预热所有镜像（使用国内镜像源）"
+    echo "  start        启动 MySQL + Milvus 基础设施服务"
+    echo "  stop         停止基础设施服务"
+    echo "  restart      重启基础设施服务"
+    echo "  status       查看基础设施服务状态"
+    echo "  logs         查看基础设施服务日志"
+    echo "  preload      预热所有镜像（使用国内镜像源）"
     echo "  setup-mirror 配置 Docker 国内镜像源"
     echo "  check-mirror 检查当前镜像源配置"
-    echo "  help        显示帮助信息"
+    echo "  help         显示帮助信息"
+    echo ""
+    echo -e "${YELLOW}💡 应用层服务 (后端 + 前端) 请使用 ./scripts/deploy.sh 管理${NC}"
 }
 
 # 配置 Docker 国内镜像源
@@ -221,30 +223,27 @@ preload_image() {
     echo -e "${YELLOW}⏱️  超时或失败${NC}"
     echo -ne "    尝试通过国内镜像源拉取... "
     
-    # 对于 Docker Hub 的镜像，尝试通过国内镜像源代理拉取
-    if [[ ! "$image" == *"/"* ]] || [[ "$image" == docker.io/* ]] || [[ ! "$image" == *"."*"/"* ]]; then
-        # 这是 Docker Hub 的镜像，尝试通过镜像源代理拉取
-        local proxy_success=false
-        for mirror in "${MIRROR_SOURCES[@]}"; do
-            local mirror_image="${mirror#https://}/${image}"
-            echo -ne "\n      尝试 ${mirror} ... "
-            if timeout_cmd 120 docker pull "$mirror_image" 2>/dev/null; then
-                # 重新标记为原始名称
-                docker tag "$mirror_image" "$image" 2>/dev/null
-                docker rmi "$mirror_image" 2>/dev/null
-                echo -ne "${GREEN}✅ 成功${NC}"
-                proxy_success=true
-                break
-            fi
-        done
-        if [ "$proxy_success" = true ]; then
-            echo ""
-            return 0
+    # 对所有镜像尝试通过国内镜像源代理拉取
+    local proxy_success=false
+    for mirror in "${MIRROR_SOURCES[@]}"; do
+        local mirror_image="${mirror#https://}/${image}"
+        echo -ne "\n      尝试 ${mirror} ... "
+        if timeout_cmd 120 docker pull "$mirror_image" 2>/dev/null; then
+            # 重新标记为原始名称
+            docker tag "$mirror_image" "$image" 2>/dev/null
+            docker rmi "$mirror_image" 2>/dev/null
+            echo -ne "${GREEN}✅ 成功${NC}"
+            proxy_success=true
+            break
         fi
+    done
+    if [ "$proxy_success" = true ]; then
+        echo ""
+        return 0
     fi
     
-    # 尝试直接拉取 Docker Hub（不使用 timeout，可能较慢）
-    echo -ne "\n      直接从 Docker Hub 拉取... "
+    # 尝试直接从原始源拉取（不使用 timeout，可能较慢）
+    echo -ne "\n      直接从原始源拉取... "
     if docker pull "$image" 2>/dev/null; then
         echo -ne "${GREEN}✅ 成功${NC}"
         echo ""
@@ -283,7 +282,7 @@ preload_images() {
 }
 
 start_services() {
-    echo -e "${BLUE}🚀 启动 MGAgent 基础设施服务...${NC}"
+    echo -e "${BLUE}🚀 启动 MGAgent 基础设施服务 (MySQL + Milvus)...${NC}"
     
     if [ -f "$ENV_FILE" ]; then
         export $(grep -v '^#' "$ENV_FILE" | xargs)
@@ -318,12 +317,13 @@ start_services() {
     
     docker compose -f "$COMPOSE_FILE" up -d
     
-    echo -e "${YELLOW}等待服务就绪...${NC}"
+    echo -e "${YELLOW}等待基础设施就绪...${NC}"
     sleep 10
     
     docker compose -f "$COMPOSE_FILE" ps
     
-    echo -e "${GREEN}✅ 服务启动完成${NC}"
+    echo -e "${GREEN}✅ 基础设施服务已启动${NC}"
+    echo -e "${YELLOW}💡 应用层服务请使用 ./scripts/deploy.sh mysql 启动${NC}"
     echo ""
     echo -e "📊 访问地址:"
     echo -e "   MySQL:      mysql -h localhost -P 3306 -u mgagent -p"
@@ -356,15 +356,6 @@ show_logs() {
     docker compose -f "$COMPOSE_FILE" logs -f --tail=100
 }
 
-do_migrate() {
-    echo -e "${BLUE}🚀 执行数据迁移...${NC}"
-    
-    # 检查 Python 依赖
-    pip install pymysql pymilvus langchain-chroma chromadb -q 2>/dev/null || true
-    
-    python "$PROJECT_ROOT/scripts/migrate_data.py"
-}
-
 case "${1:-}" in
     start)
         start_services
@@ -380,9 +371,6 @@ case "${1:-}" in
         ;;
     logs)
         show_logs
-        ;;
-    migrate)
-        do_migrate
         ;;
     preload)
         preload_images

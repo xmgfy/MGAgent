@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200">
+  <defs>
+    <linearGradient id="model-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#2e8555;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#45b273;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  <circle cx="100" cy="80" r="35" fill="url(#model-gradient)" opacity="0.3"/>
+  <circle cx="100" cy="80" r="25" fill="url(#model-gradient)" opacity="0.5"/>
+  <circle cx="100" cy="80" r="15" fill="url(#model-gradient)" opacity="0.7"/>
+  <circle cx="60" cy="130" r="12" fill="url(#model-gradient)" opacity="0.4"/>
+  <circle cx="140" cy="130" r="12" fill="url(#model-gradient)" opacity="0.4"/>
+  <circle cx="100" cy="140" r="12" fill="url(#model-gradient)" opacity="0.6"/>
+  <text x="100" y="180" text-anchor="middle" font-size="14" fill="#2e8555" font-weight="bold">模型配置</text>
+</svg>

@@ -1,0 +1,27 @@
+{
+  "id": "getting-started/configuration",
+  "title": "配置说明",
+  "description": "MGAgent 系统配置详解，包括环境变量、模型配置和技术栈选择",
+  "source": "@site/docs/getting-started/configuration.md",
+  "sourceDirName": "getting-started",
+  "slug": "/getting-started/configuration",
+  "permalink": "/docs/getting-started/configuration",
+  "draft": false,
+  "unlisted": false,
+  "tags": [],
+  "version": "current",
+  "frontMatter": {
+    "title": "配置说明",
+    "description": "MGAgent 系统配置详解，包括环境变量、模型配置和技术栈选择",
+    "slug": "/getting-started/configuration"
+  },
+  "sidebar": "tutorialSidebar",
+  "previous": {
+    "title": "快速开始",
+    "permalink": "/docs/getting-started/quick-start"
+  },
+  "next": {
+    "title": "架构概述",
+    "permalink": "/docs/architecture/overview"
+  }
+}
