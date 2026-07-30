@@ -11,12 +11,13 @@ const config = {
   url: 'https://xmgfy.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/mgagent',
+  // 注意：GitHub 仓库名为 MGAgent（大写），baseUrl 需与之匹配
+  baseUrl: '/MGAgent',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
   organizationName: 'xmgfy', // Usually your GitHub org/user name.
-  projectName: 'mgagent', // Usually your repo name.
+  projectName: 'MGAgent', // Usually your repo name.
 
   onBrokenLinks: 'ignore',
   onBrokenMarkdownLinks: 'ignore',

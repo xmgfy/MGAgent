@@ -29,6 +29,10 @@ package-lock.json
 yarn.lock
 pnpm-lock.yaml
 
+# Docusaurus 构建缓存
+.docusaurus/
+website/.docusaurus/
+
 # 构建产物
 dist/
 build/
@@ -72,6 +76,7 @@ htmlcov/
 # 本地工具脚本（不纳入版本控制）
 git-sync.sh
 scripts/git-sync.sh
+scripts/deploy-docs.sh
 
 # 截图目录（如果不需要上传截图）
 # docs/images/
