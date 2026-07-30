@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmgagent_docs=self.webpackChunkmgagent_docs||[]).push([[5329],{6643(e){e.exports=JSON.parse('{"metadata":{"permalink":"/MGAgent/blog","page":1,"postsPerPage":10,"totalPages":1,"totalCount":4,"blogDescription":"Blog","blogTitle":"Blog"}}')}}]);

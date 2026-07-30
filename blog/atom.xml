@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://xmgfy.github.io/MGAgent/blog</id>
+    <title>MGAgent Blog</title>
+    <updated>2026-07-15T00:00:00.000Z</updated>
+    <generator>https://github.com/jpmonette/feed</generator>
+    <link rel="alternate" href="https://xmgfy.github.io/MGAgent/blog"/>
+    <subtitle>MGAgent Blog</subtitle>
+    <icon>https://xmgfy.github.io/MGAgent/img/favicon.ico</icon>
+    <entry>
+        <title type="html"><![CDATA[2026年7月 - 双技术栈架构与文档站点]]></title>
+        <id>https://xmgfy.github.io/MGAgent/blog/2026-07-release</id>
+        <link href="https://xmgfy.github.io/MGAgent/blog/2026-07-release"/>
+        <updated>2026-07-15T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[MGAgent 重大更新：支持双技术栈架构，上线 Docusaurus 在线文档站点]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="核心更新">核心更新<a href="https://xmgfy.github.io/MGAgent/blog/2026-07-release#%E6%A0%B8%E5%BF%83%E6%9B%B4%E6%96%B0" class="hash-link" aria-label="核心更新的直接链接" title="核心更新的直接链接" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-双技术栈架构支持">🎯 双技术栈架构支持<a href="https://xmgfy.github.io/MGAgent/blog/2026-07-release#-%E5%8F%8C%E6%8A%80%E6%9C%AF%E6%A0%88%E6%9E%B6%E6%9E%84%E6%94%AF%E6%8C%81" class="hash-link" aria-label="🎯 双技术栈架构支持的直接链接" title="🎯 双技术栈架构支持的直接链接" translate="no">​</a></h3>
+<p>MGAgent 现已支持两套技术栈方案，可根据部署场景灵活选择：</p>
+<ul>
+<li class="">
+<p><strong>方案一：SQLite + ChromaDB</strong>（开发调试）</p>
+<ul>
+<li class="">轻量级单机部署</li>
+<li class="">无需外部依赖，快速启动</li>
+<li class="">适用于个人开发者和小型团队</li>
+</ul>
+</li>
+<li class="">
+<p><strong>方案二：MySQL + Milvus</strong>（生产部署）</p>
+<ul>
+<li class="">高性能企业级部署</li>
+<li class="">支持高并发和大规模数据</li>
+<li class="">适用于企业生产环境</li>
+</ul>
+</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-在线文档站点上线">📚 在线文档站点上线<a href="https://xmgfy.github.io/MGAgent/blog/2026-07-release#-%E5%9C%A8%E7%BA%BF%E6%96%87%E6%A1%A3%E7%AB%99%E7%82%B9%E4%B8%8A%E7%BA%BF" class="hash-link" aria-label="📚 在线文档站点上线的直接链接" title="📚 在线文档站点上线的直接链接" translate="no">​</a></h3>
+<p>基于 GitHub Pages + Docusaurus 构建的完整在线文档站点已上线：</p>
+<ul>
+<li class="">完整的项目文档和 API 参考</li>
+<li class="">交互式 Mermaid 架构图</li>
+<li class="">多语言支持（中文优先）</li>
+<li class="">响应式设计，支持移动端</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-一键部署脚本">🔧 一键部署脚本<a href="https://xmgfy.github.io/MGAgent/blog/2026-07-release#-%E4%B8%80%E9%94%AE%E9%83%A8%E7%BD%B2%E8%84%9A%E6%9C%AC" class="hash-link" aria-label="🔧 一键部署脚本的直接链接" title="🔧 一键部署脚本的直接链接" translate="no">​</a></h3>
+<p>新增 <code>deploy.sh</code> 一键部署脚本：</p>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#bfc7d5"><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># SQLite 方案</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">./scripts/deploy.sh sqlite</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># MySQL 方案</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">./scripts/deploy.sh mysql</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 停止所有服务</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">./scripts/deploy.sh stop</span><br></div></code></pre></div></div>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="优化与改进">优化与改进<a href="https://xmgfy.github.io/MGAgent/blog/2026-07-release#%E4%BC%98%E5%8C%96%E4%B8%8E%E6%94%B9%E8%BF%9B" class="hash-link" aria-label="优化与改进的直接链接" title="优化与改进的直接链接" translate="no">​</a></h2>
+<ul>
+<li class="">优化 Docker Compose 配置，采用分层部署架构</li>
+<li class="">大模型配置统一从数据库读取，支持动态切换</li>
+<li class="">前端 Admin 端模型配置管理功能完善</li>
+<li class="">修复 Mermaid 图表渲染问题</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="致谢">致谢<a href="https://xmgfy.github.io/MGAgent/blog/2026-07-release#%E8%87%B4%E8%B0%A2" class="hash-link" aria-label="致谢的直接链接" title="致谢的直接链接" translate="no">​</a></h2>
+<p>感谢所有为本次更新做出贡献的开发者！</p>]]></content>
+        <author>
+            <name>小码哥</name>
+            <uri>https://github.com/xmgfy</uri>
+        </author>
+        <category label="新功能" term="新功能"/>
+        <category label="架构升级" term="架构升级"/>
+        <category label="文档" term="文档"/>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2026年6月 - 模型配置动态化与性能优化]]></title>
+        <id>https://xmgfy.github.io/MGAgent/blog/2026-06-release</id>
+        <link href="https://xmgfy.github.io/MGAgent/blog/2026-06-release"/>
+        <updated>2026-06-20T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[MGAgent 模型配置架构重大升级，支持动态加载和热切换]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="核心更新">核心更新<a href="https://xmgfy.github.io/MGAgent/blog/2026-06-release#%E6%A0%B8%E5%BF%83%E6%9B%B4%E6%96%B0" class="hash-link" aria-label="核心更新的直接链接" title="核心更新的直接链接" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="️-模型配置动态化">⚙️ 模型配置动态化<a href="https://xmgfy.github.io/MGAgent/blog/2026-06-release#%EF%B8%8F-%E6%A8%A1%E5%9E%8B%E9%85%8D%E7%BD%AE%E5%8A%A8%E6%80%81%E5%8C%96" class="hash-link" aria-label="⚙️ 模型配置动态化的直接链接" title="⚙️ 模型配置动态化的直接链接" translate="no">​</a></h3>
+<ul>
+<li class="">所有 LLM 配置统一从数据库读取</li>
+<li class="">支持模型参数动态修改，无需重启服务</li>
+<li class="">Admin 端模型配置管理界面完善</li>
+<li class="">支持多模型并行配置与切换</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-性能优化">🚀 性能优化<a href="https://xmgfy.github.io/MGAgent/blog/2026-06-release#-%E6%80%A7%E8%83%BD%E4%BC%98%E5%8C%96" class="hash-link" aria-label="🚀 性能优化的直接链接" title="🚀 性能优化的直接链接" translate="no">​</a></h3>
+<ul>
+<li class="">Agent 响应速度提升 30%</li>
+<li class="">优化 RAG 检索流程，减少延迟</li>
+<li class="">并发处理能力增强</li>
+<li class="">内存占用优化</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-插件化架构">🔌 插件化架构<a href="https://xmgfy.github.io/MGAgent/blog/2026-06-release#-%E6%8F%92%E4%BB%B6%E5%8C%96%E6%9E%B6%E6%9E%84" class="hash-link" aria-label="🔌 插件化架构的直接链接" title="🔌 插件化架构的直接链接" translate="no">​</a></h3>
+<ul>
+<li class="">Agent 工具采用插件化设计</li>
+<li class="">新增工具无需修改核心代码</li>
+<li class="">支持第三方工具集成</li>
+<li class="">统一工具接口规范</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="技术改进">技术改进<a href="https://xmgfy.github.io/MGAgent/blog/2026-06-release#%E6%8A%80%E6%9C%AF%E6%94%B9%E8%BF%9B" class="hash-link" aria-label="技术改进的直接链接" title="技术改进的直接链接" translate="no">​</a></h2>
+<ul>
+<li class="">引入配置缓存机制</li>
+<li class="">优化数据库连接池</li>
+<li class="">增强错误处理和日志记录</li>
+<li class="">API 响应标准化</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="下一步计划">下一步计划<a href="https://xmgfy.github.io/MGAgent/blog/2026-06-release#%E4%B8%8B%E4%B8%80%E6%AD%A5%E8%AE%A1%E5%88%92" class="hash-link" aria-label="下一步计划的直接链接" title="下一步计划的直接链接" translate="no">​</a></h2>
+<ul>
+<li class="">完善多租户权限体系</li>
+<li class="">增加更多 Agent 工具</li>
+<li class="">优化前端交互体验</li>
+</ul>]]></content>
+        <author>
+            <name>小码哥</name>
+            <uri>https://github.com/xmgfy</uri>
+        </author>
+        <category label="性能优化" term="性能优化"/>
+        <category label="动态配置" term="动态配置"/>
+        <category label="新功能" term="新功能"/>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2026年5月 - RAG 增强与多工具支持]]></title>
+        <id>https://xmgfy.github.io/MGAgent/blog/2026-05-release</id>
+        <link href="https://xmgfy.github.io/MGAgent/blog/2026-05-release"/>
+        <updated>2026-05-15T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[MGAgent RAG 检索增强，支持多种 Agent 工具]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="核心更新">核心更新<a href="https://xmgfy.github.io/MGAgent/blog/2026-05-release#%E6%A0%B8%E5%BF%83%E6%9B%B4%E6%96%B0" class="hash-link" aria-label="核心更新的直接链接" title="核心更新的直接链接" translate="no">​</a></h2>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-rag-检索增强">📖 RAG 检索增强<a href="https://xmgfy.github.io/MGAgent/blog/2026-05-release#-rag-%E6%A3%80%E7%B4%A2%E5%A2%9E%E5%BC%BA" class="hash-link" aria-label="📖 RAG 检索增强的直接链接" title="📖 RAG 检索增强的直接链接" translate="no">​</a></h3>
+<ul>
+<li class="">支持多种文档格式（PDF、Word、Markdown、TXT）</li>
+<li class="">向量化过程自动化</li>
+<li class="">相似度检索算法优化</li>
+<li class="">支持重排序（Re-ranking）</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="️-多工具支持">🛠️ 多工具支持<a href="https://xmgfy.github.io/MGAgent/blog/2026-05-release#%EF%B8%8F-%E5%A4%9A%E5%B7%A5%E5%85%B7%E6%94%AF%E6%8C%81" class="hash-link" aria-label="🛠️ 多工具支持的直接链接" title="🛠️ 多工具支持的直接链接" translate="no">​</a></h3>
+<p>MGAgent Agent 现已支持多种工具：</p>
+<ul>
+<li class=""><strong>计算器工具</strong>：自然语言数学计算</li>
+<li class=""><strong>数据库查询工具</strong>：自然语言转 SQL</li>
+<li class=""><strong>Web 搜索工具</strong>：实时信息检索</li>
+<li class=""><strong>代码执行工具</strong>：Python 代码沙箱</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-工作流引擎">🔄 工作流引擎<a href="https://xmgfy.github.io/MGAgent/blog/2026-05-release#-%E5%B7%A5%E4%BD%9C%E6%B5%81%E5%BC%95%E6%93%8E" class="hash-link" aria-label="🔄 工作流引擎的直接链接" title="🔄 工作流引擎的直接链接" translate="no">​</a></h3>
+<ul>
+<li class="">多步骤任务自动规划</li>
+<li class="">工具调用链优化</li>
+<li class="">错误自动重试</li>
+<li class="">支持人工干预</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="功能改进">功能改进<a href="https://xmgfy.github.io/MGAgent/blog/2026-05-release#%E5%8A%9F%E8%83%BD%E6%94%B9%E8%BF%9B" class="hash-link" aria-label="功能改进的直接链接" title="功能改进的直接链接" translate="no">​</a></h2>
+<ul>
+<li class="">对话上下文记忆增强</li>
+<li class="">流式响应体验优化</li>
+<li class="">知识库批量导入</li>
+<li class="">对话历史搜索功能</li>
+</ul>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="使用示例">使用示例<a href="https://xmgfy.github.io/MGAgent/blog/2026-05-release#%E4%BD%BF%E7%94%A8%E7%A4%BA%E4%BE%8B" class="hash-link" aria-label="使用示例的直接链接" title="使用示例的直接链接" translate="no">​</a></h2>
+<div class="language-python codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-python codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#bfc7d5"><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 初始化 Agent</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">agent </span><span class="token operator" style="color:rgb(137, 221, 255)">=</span><span class="token plain"> MGAgent</span><span class="token punctuation" style="color:rgb(199, 146, 234)">(</span><span class="token punctuation" style="color:rgb(199, 146, 234)">)</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 自动选择工具</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">response </span><span class="token operator" style="color:rgb(137, 221, 255)">=</span><span class="token plain"> agent</span><span class="token punctuation" style="color:rgb(199, 146, 234)">.</span><span class="token plain">chat</span><span class="token punctuation" style="color:rgb(199, 146, 234)">(</span><span class="token string" style="color:rgb(195, 232, 141)">"帮我查询上个月的销售数据并计算增长率"</span><span class="token punctuation" style="color:rgb(199, 146, 234)">)</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># Agent 会自动：</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 1. 识别意图 -&gt; 数据查询 + 计算</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 2. 调用数据库工具获取数据</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 3. 调用计算器工具分析</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 4. 生成自然语言报告</span><br></div></code></pre></div></div>]]></content>
+        <author>
+            <name>小码哥</name>
+            <uri>https://github.com/xmgfy</uri>
+        </author>
+        <category label="RAG" term="RAG"/>
+        <category label="工具集成" term="工具集成"/>
+        <category label="新功能" term="新功能"/>
+    </entry>
+    <entry>
+        <title type="html"><![CDATA[2026年4月 - 项目启动与基础功能]]></title>
+        <id>https://xmgfy.github.io/MGAgent/blog/2026-04-release</id>
+        <link href="https://xmgfy.github.io/MGAgent/blog/2026-04-release"/>
+        <updated>2026-04-10T00:00:00.000Z</updated>
+        <summary type="html"><![CDATA[MGAgent 项目正式启动，发布基础版本]]></summary>
+        <content type="html"><![CDATA[<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="项目启动">项目启动<a href="https://xmgfy.github.io/MGAgent/blog/2026-04-release#%E9%A1%B9%E7%9B%AE%E5%90%AF%E5%8A%A8" class="hash-link" aria-label="项目启动的直接链接" title="项目启动的直接链接" translate="no">​</a></h2>
+<p>MGAgent 企业级智能体系统正式发布！</p>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-核心功能首发">🌟 核心功能首发<a href="https://xmgfy.github.io/MGAgent/blog/2026-04-release#-%E6%A0%B8%E5%BF%83%E5%8A%9F%E8%83%BD%E9%A6%96%E5%8F%91" class="hash-link" aria-label="🌟 核心功能首发的直接链接" title="🌟 核心功能首发的直接链接" translate="no">​</a></h3>
+<ul>
+<li class=""><strong>智能对话</strong>：基于大模型的多轮对话能力</li>
+<li class=""><strong>上下文理解</strong>：支持多轮对话上下文记忆</li>
+<li class=""><strong>意图识别</strong>：精准理解用户意图</li>
+<li class=""><strong>流式响应</strong>：实时流式输出，提升交互体验</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="️-架构设计">🏗️ 架构设计<a href="https://xmgfy.github.io/MGAgent/blog/2026-04-release#%EF%B8%8F-%E6%9E%B6%E6%9E%84%E8%AE%BE%E8%AE%A1" class="hash-link" aria-label="🏗️ 架构设计的直接链接" title="🏗️ 架构设计的直接链接" translate="no">​</a></h3>
+<p>MGAgent 采用现代化技术栈构建：</p>
+<ul>
+<li class=""><strong>后端</strong>：FastAPI + LangChain + SQLAlchemy</li>
+<li class=""><strong>前端</strong>：React + TypeScript + Tailwind CSS</li>
+<li class=""><strong>存储</strong>：SQLite / MySQL + ChromaDB / Milvus</li>
+<li class=""><strong>部署</strong>：Docker Compose 容器化部署</li>
+</ul>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-项目结构">📁 项目结构<a href="https://xmgfy.github.io/MGAgent/blog/2026-04-release#-%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84" class="hash-link" aria-label="📁 项目结构的直接链接" title="📁 项目结构的直接链接" translate="no">​</a></h3>
+<div class="language-text codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-text codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#bfc7d5"><span class="token plain">MGAgent/</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">├── app/                    # 后端应用</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── api/                # API 路由</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── agent/              # Agent 核心</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── config/             # 配置模块</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── db/                 # 数据库</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── rag/                # RAG 模块</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   ├── services/           # 服务层</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">│   └── tools/              # 工具集</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">├── mgagent-frontend/       # Chat 前端</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">├── mgagent-admin-frontend/ # Admin 前端</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">├── scripts/                # 部署脚本</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">└── docker/                 # Docker 配置</span><br></div></code></pre></div></div>
+<h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="-快速开始">🚀 快速开始<a href="https://xmgfy.github.io/MGAgent/blog/2026-04-release#-%E5%BF%AB%E9%80%9F%E5%BC%80%E5%A7%8B" class="hash-link" aria-label="🚀 快速开始的直接链接" title="🚀 快速开始的直接链接" translate="no">​</a></h3>
+<div class="language-bash codeBlockContainer_Ckt0 theme-code-block" style="--prism-color:#bfc7d5;--prism-background-color:#292d3e"><div class="codeBlockContent_QJqH"><pre tabindex="0" class="prism-code language-bash codeBlock_bY9V thin-scrollbar" style="color:#bfc7d5;background-color:#292d3e"><code class="codeBlockLines_e6Vv"><div class="token-line" style="color:#bfc7d5"><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 克隆项目</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token function" style="color:rgb(130, 170, 255)">git</span><span class="token plain"> clone https://github.com/xmgfy/mgagent.git</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 进入目录</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token builtin class-name" style="color:rgb(255, 203, 107)">cd</span><span class="token plain"> mgagent</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># SQLite 方案一键启动</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">./scripts/deploy.sh sqlite</span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain" style="display:inline-block"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain"></span><span class="token comment" style="color:rgb(105, 112, 152);font-style:italic"># 或 MySQL 方案一键启动</span><span class="token plain"></span><br></div><div class="token-line" style="color:#bfc7d5"><span class="token plain">./scripts/deploy.sh mysql</span><br></div></code></pre></div></div>
+<h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="致谢">致谢<a href="https://xmgfy.github.io/MGAgent/blog/2026-04-release#%E8%87%B4%E8%B0%A2" class="hash-link" aria-label="致谢的直接链接" title="致谢的直接链接" translate="no">​</a></h2>
+<p>感谢每一位参与项目开发和测试的朋友！</p>]]></content>
+        <author>
+            <name>小码哥</name>
+            <uri>https://github.com/xmgfy</uri>
+        </author>
+        <category label="项目启动" term="项目启动"/>
+        <category label="基础功能" term="基础功能"/>
+    </entry>
+</feed>

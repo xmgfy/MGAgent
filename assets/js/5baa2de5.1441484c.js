@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmgagent_docs=self.webpackChunkmgagent_docs||[]).push([[7912],{1890(t){t.exports=JSON.parse('{"authors":[{"name":"\u5c0f\u7801\u54e5","title":"MGAgent \u6838\u5fc3\u5f00\u53d1\u8005","url":"https://github.com/xmgfy","imageURL":"https://github.com/xmgfy.png","key":"mgagent","page":null,"count":4}]}')}}]);

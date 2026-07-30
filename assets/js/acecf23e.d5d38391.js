@@ -1,0 +1,1 @@
+"use strict";(self.webpackChunkmgagent_docs=self.webpackChunkmgagent_docs||[]).push([[1903],{1912(e){e.exports=JSON.parse('{"blogBasePath":"/MGAgent/blog","blogTitle":"Blog","authorsListPath":"/MGAgent/blog/authors"}')}}]);
