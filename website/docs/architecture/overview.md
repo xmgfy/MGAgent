@@ -23,32 +23,32 @@ MGAgent 的架构设计遵循以下核心原则：
 
 ```mermaid
 flowchart TB
-    subgraph "用户层 User Layer"
-        A[Chat 前端<br/>React + TypeScript<br/>Nginx :3000]
-        B[Admin 前端<br/>React + TypeScript<br/>Nginx :3001]
+    subgraph S1["用户层 User Layer"]
+        A["Chat 前端<br/>React + TypeScript<br/>Nginx :3000"]
+        B["Admin 前端<br/>React + TypeScript<br/>Nginx :3001"]
     end
 
-    subgraph "API 层 API Layer"
-        C[Chat 后端<br/>FastAPI :8000]
-        D[Admin 后端<br/>FastAPI :8001]
+    subgraph S2["API层 API Layer"]
+        C["Chat 后端<br/>FastAPI :8000"]
+        D["Admin 后端<br/>FastAPI :8001"]
     end
 
-    subgraph "数据层 Data Layer"
+    subgraph S3["数据层 Data Layer"]
         E[("SQLite / MySQL<br/>关系数据库")]
         F[("ChromaDB / Milvus<br/>向量数据库")]
-        G[(etcd & MinIO<br/>Milvus 依赖)]
-        H[Document Storage<br/>文档存储]
+        G[("etcd & MinIO<br/>Milvus 依赖")]
+        H["Document Storage<br/>文档存储"]
     end
 
-    subgraph "AI 能力层 AI Layer"
+    subgraph S4["AI能力层 AI Layer"]
         I[LangChain Agent]
         J[RAG Retriever]
         K[LLM Models]
-        L[Tools<br/>计算器/数据库查询]
+        L["Tools<br/>计算器/数据库查询"]
     end
 
-    subgraph "配置层 Config Layer"
-        M[模型配置表<br/>model_configs]
+    subgraph S5["配置层 Config Layer"]
+        M["模型配置表<br/>model_configs"]
     end
 
     A -- "HTTP/REST" --> C
@@ -66,11 +66,17 @@ flowchart TB
     C -- "读取" --> M
     D -- "管理" --> M
 
-    style 用户层 fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-    style API层 fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    style 数据层 fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
-    style AI能力层 fill:#fce7f3,stroke:#ec4899,stroke-width:2px
-    style 配置层 fill:#e0e7ff,stroke:#6366f1,stroke-width:2px
+    classDef userLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+    classDef apiLayer fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    classDef dataLayer fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
+    classDef aiLayer fill:#fce7f3,stroke:#ec4899,stroke-width:2px
+    classDef configLayer fill:#e0e7ff,stroke:#6366f1,stroke-width:2px
+
+    class S1 userLayer
+    class S2 apiLayer
+    class S3 dataLayer
+    class S4 aiLayer
+    class S5 configLayer
 ```
 
 ## 模块划分
@@ -138,7 +144,7 @@ sequenceDiagram
 
 ```mermaid
 flowchart LR
-    A[用户提问] --> B[文本嵌入<br/>Embedding]
+    A[用户提问] --> B["文本嵌入<br/>Embedding"]
     B --> C[向量搜索]
     C --> D{向量数据库类型}
     D -->|ChromaDB| E[ChromaDB 检索]

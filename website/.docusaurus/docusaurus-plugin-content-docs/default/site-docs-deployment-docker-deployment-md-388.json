@@ -5,7 +5,7 @@
   "source": "@site/docs/deployment/docker-deployment.md",
   "sourceDirName": "deployment",
   "slug": "/deployment/docker-deployment",
-  "permalink": "/docs/deployment/docker-deployment",
+  "permalink": "/mgagent/docs/deployment/docker-deployment",
   "draft": false,
   "unlisted": false,
   "tags": [],
@@ -18,10 +18,10 @@
   "sidebar": "tutorialSidebar",
   "previous": {
     "title": "本地开发部署",
-    "permalink": "/docs/deployment/local-development"
+    "permalink": "/mgagent/docs/deployment/local-development"
   },
   "next": {
     "title": "MySQL 方案部署",
-    "permalink": "/docs/deployment/mysql-deployment"
+    "permalink": "/mgagent/docs/deployment/mysql-deployment"
   }
 }

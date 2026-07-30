@@ -5,7 +5,7 @@
   "source": "@site/docs/deployment/production-deployment.md",
   "sourceDirName": "deployment",
   "slug": "/deployment/production-deployment",
-  "permalink": "/docs/deployment/production-deployment",
+  "permalink": "/mgagent/docs/deployment/production-deployment",
   "draft": false,
   "unlisted": false,
   "tags": [],
@@ -18,10 +18,10 @@
   "sidebar": "tutorialSidebar",
   "previous": {
     "title": "MySQL 方案部署",
-    "permalink": "/docs/deployment/mysql-deployment"
+    "permalink": "/mgagent/docs/deployment/mysql-deployment"
   },
   "next": {
     "title": "项目结构",
-    "permalink": "/docs/development/project-structure"
+    "permalink": "/mgagent/docs/development/project-structure"
   }
 }

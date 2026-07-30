@@ -1,4 +1,29 @@
 {
   "title": "Recent posts",
-  "items": []
+  "items": [
+    {
+      "title": "2026年7月 - 双技术栈架构与文档站点",
+      "permalink": "/mgagent/blog/2026-07-release",
+      "unlisted": false,
+      "date": "2026-07-15T00:00:00.000Z"
+    },
+    {
+      "title": "2026年6月 - 模型配置动态化与性能优化",
+      "permalink": "/mgagent/blog/2026-06-release",
+      "unlisted": false,
+      "date": "2026-06-20T00:00:00.000Z"
+    },
+    {
+      "title": "2026年5月 - RAG 增强与多工具支持",
+      "permalink": "/mgagent/blog/2026-05-release",
+      "unlisted": false,
+      "date": "2026-05-15T00:00:00.000Z"
+    },
+    {
+      "title": "2026年4月 - 项目启动与基础功能",
+      "permalink": "/mgagent/blog/2026-04-release",
+      "unlisted": false,
+      "date": "2026-04-10T00:00:00.000Z"
+    }
+  ]
 }

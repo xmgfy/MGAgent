@@ -1,0 +1,55 @@
+{
+  "permalink": "/mgagent/blog/2026-07-release",
+  "source": "@site/blog/2026-07-release.md",
+  "title": "2026年7月 - 双技术栈架构与文档站点",
+  "description": "MGAgent 重大更新：支持双技术栈架构，上线 Docusaurus 在线文档站点",
+  "date": "2026-07-15T00:00:00.000Z",
+  "tags": [
+    {
+      "inline": true,
+      "label": "新功能",
+      "permalink": "/mgagent/blog/tags/新功能"
+    },
+    {
+      "inline": true,
+      "label": "架构升级",
+      "permalink": "/mgagent/blog/tags/架构升级"
+    },
+    {
+      "inline": true,
+      "label": "文档",
+      "permalink": "/mgagent/blog/tags/文档"
+    }
+  ],
+  "readingTime": 0.98,
+  "hasTruncateMarker": true,
+  "authors": [
+    {
+      "name": "小码哥",
+      "title": "MGAgent 核心开发者",
+      "url": "https://github.com/xmgfy",
+      "imageURL": "https://github.com/xmgfy.png",
+      "key": "mgagent",
+      "page": null
+    }
+  ],
+  "frontMatter": {
+    "slug": "2026-07-release",
+    "title": "2026年7月 - 双技术栈架构与文档站点",
+    "date": "2026-07-15T00:00:00.000Z",
+    "authors": [
+      "mgagent"
+    ],
+    "tags": [
+      "新功能",
+      "架构升级",
+      "文档"
+    ],
+    "description": "MGAgent 重大更新：支持双技术栈架构，上线 Docusaurus 在线文档站点"
+  },
+  "unlisted": false,
+  "nextItem": {
+    "title": "2026年6月 - 模型配置动态化与性能优化",
+    "permalink": "/mgagent/blog/2026-06-release"
+  }
+}

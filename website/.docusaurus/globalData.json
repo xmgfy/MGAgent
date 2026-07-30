@@ -1,113 +1,113 @@
 {
   "docusaurus-plugin-content-docs": {
     "default": {
-      "path": "/docs",
+      "path": "/mgagent/docs",
       "versions": [
         {
           "name": "current",
           "label": "Next",
           "isLast": true,
-          "path": "/docs",
+          "path": "/mgagent/docs",
           "mainDocId": "intro",
           "docs": [
             {
               "id": "architecture/database",
-              "path": "/docs/architecture/database",
+              "path": "/mgagent/docs/architecture/database",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "architecture/dual-stack",
-              "path": "/docs/architecture/dual-stack",
+              "path": "/mgagent/docs/architecture/dual-stack",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "architecture/model-config",
-              "path": "/docs/architecture/model-config",
+              "path": "/mgagent/docs/architecture/model-config",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "architecture/overview",
-              "path": "/docs/architecture/overview",
+              "path": "/mgagent/docs/architecture/overview",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "configuration/docker",
-              "path": "/docs/configuration/docker",
+              "path": "/mgagent/docs/configuration/docker",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "configuration/environment-variables",
-              "path": "/docs/configuration/environment-variables",
+              "path": "/mgagent/docs/configuration/environment-variables",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "configuration/nginx",
-              "path": "/docs/configuration/nginx",
+              "path": "/mgagent/docs/configuration/nginx",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "deployment/docker-deployment",
-              "path": "/docs/deployment/docker-deployment",
+              "path": "/mgagent/docs/deployment/docker-deployment",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "deployment/local-development",
-              "path": "/docs/deployment/local-development",
+              "path": "/mgagent/docs/deployment/local-development",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "deployment/mysql-deployment",
-              "path": "/docs/deployment/mysql-deployment",
+              "path": "/mgagent/docs/deployment/mysql-deployment",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "deployment/production-deployment",
-              "path": "/docs/deployment/production-deployment",
+              "path": "/mgagent/docs/deployment/production-deployment",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "development/api-reference",
-              "path": "/docs/development/api-reference",
+              "path": "/mgagent/docs/development/api-reference",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "development/project-structure",
-              "path": "/docs/development/project-structure",
+              "path": "/mgagent/docs/development/project-structure",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "development/scripts",
-              "path": "/docs/development/scripts",
+              "path": "/mgagent/docs/development/scripts",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "getting-started/configuration",
-              "path": "/docs/getting-started/configuration",
+              "path": "/mgagent/docs/getting-started/configuration",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "getting-started/installation",
-              "path": "/docs/getting-started/installation",
+              "path": "/mgagent/docs/getting-started/installation",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "getting-started/quick-start",
-              "path": "/docs/getting-started/quick-start",
+              "path": "/mgagent/docs/getting-started/quick-start",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "intro",
-              "path": "/docs/intro",
+              "path": "/mgagent/docs/intro",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "troubleshooting/common-issues",
-              "path": "/docs/troubleshooting/common-issues",
+              "path": "/mgagent/docs/troubleshooting/common-issues",
               "sidebar": "tutorialSidebar"
             },
             {
               "id": "troubleshooting/faq",
-              "path": "/docs/troubleshooting/faq",
+              "path": "/mgagent/docs/troubleshooting/faq",
               "sidebar": "tutorialSidebar"
             }
           ],
@@ -115,7 +115,7 @@
           "sidebars": {
             "tutorialSidebar": {
               "link": {
-                "path": "/docs/intro",
+                "path": "/mgagent/docs/intro",
                 "label": "简介"
               }
             }

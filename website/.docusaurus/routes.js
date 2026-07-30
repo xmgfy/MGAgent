@@ -3,174 +3,219 @@ import ComponentCreator from '@docusaurus/ComponentCreator';
 
 export default [
   {
-    path: '/__docusaurus/debug',
-    component: ComponentCreator('/__docusaurus/debug', '5ff'),
+    path: '/mgagent/blog',
+    component: ComponentCreator('/mgagent/blog', '41f'),
     exact: true
   },
   {
-    path: '/__docusaurus/debug/config',
-    component: ComponentCreator('/__docusaurus/debug/config', '5ba'),
+    path: '/mgagent/blog/2026-04-release',
+    component: ComponentCreator('/mgagent/blog/2026-04-release', 'b66'),
     exact: true
   },
   {
-    path: '/__docusaurus/debug/content',
-    component: ComponentCreator('/__docusaurus/debug/content', 'a2b'),
+    path: '/mgagent/blog/2026-05-release',
+    component: ComponentCreator('/mgagent/blog/2026-05-release', '63a'),
     exact: true
   },
   {
-    path: '/__docusaurus/debug/globalData',
-    component: ComponentCreator('/__docusaurus/debug/globalData', 'c3c'),
+    path: '/mgagent/blog/2026-06-release',
+    component: ComponentCreator('/mgagent/blog/2026-06-release', '0e0'),
     exact: true
   },
   {
-    path: '/__docusaurus/debug/metadata',
-    component: ComponentCreator('/__docusaurus/debug/metadata', '156'),
+    path: '/mgagent/blog/2026-07-release',
+    component: ComponentCreator('/mgagent/blog/2026-07-release', '7ad'),
     exact: true
   },
   {
-    path: '/__docusaurus/debug/registry',
-    component: ComponentCreator('/__docusaurus/debug/registry', '88c'),
+    path: '/mgagent/blog/archive',
+    component: ComponentCreator('/mgagent/blog/archive', 'd94'),
     exact: true
   },
   {
-    path: '/__docusaurus/debug/routes',
-    component: ComponentCreator('/__docusaurus/debug/routes', '000'),
+    path: '/mgagent/blog/authors',
+    component: ComponentCreator('/mgagent/blog/authors', '864'),
     exact: true
   },
   {
-    path: '/blog',
-    component: ComponentCreator('/blog', '98b'),
+    path: '/mgagent/blog/tags',
+    component: ComponentCreator('/mgagent/blog/tags', '0be'),
     exact: true
   },
   {
-    path: '/docs',
-    component: ComponentCreator('/docs', '566'),
+    path: '/mgagent/blog/tags/动态配置',
+    component: ComponentCreator('/mgagent/blog/tags/动态配置', '03e'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/工具集成',
+    component: ComponentCreator('/mgagent/blog/tags/工具集成', '5ad'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/基础功能',
+    component: ComponentCreator('/mgagent/blog/tags/基础功能', '0ad'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/架构升级',
+    component: ComponentCreator('/mgagent/blog/tags/架构升级', '280'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/文档',
+    component: ComponentCreator('/mgagent/blog/tags/文档', '3ac'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/项目启动',
+    component: ComponentCreator('/mgagent/blog/tags/项目启动', '81f'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/新功能',
+    component: ComponentCreator('/mgagent/blog/tags/新功能', 'd15'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/性能优化',
+    component: ComponentCreator('/mgagent/blog/tags/性能优化', 'fa9'),
+    exact: true
+  },
+  {
+    path: '/mgagent/blog/tags/rag',
+    component: ComponentCreator('/mgagent/blog/tags/rag', '8fb'),
+    exact: true
+  },
+  {
+    path: '/mgagent/docs',
+    component: ComponentCreator('/mgagent/docs', '64c'),
     routes: [
       {
-        path: '/docs',
-        component: ComponentCreator('/docs', '782'),
+        path: '/mgagent/docs',
+        component: ComponentCreator('/mgagent/docs', '95c'),
         routes: [
           {
-            path: '/docs',
-            component: ComponentCreator('/docs', 'c01'),
+            path: '/mgagent/docs',
+            component: ComponentCreator('/mgagent/docs', '174'),
             routes: [
               {
-                path: '/docs/architecture/database',
-                component: ComponentCreator('/docs/architecture/database', 'd7f'),
+                path: '/mgagent/docs/architecture/database',
+                component: ComponentCreator('/mgagent/docs/architecture/database', 'bff'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/architecture/dual-stack',
-                component: ComponentCreator('/docs/architecture/dual-stack', '17a'),
+                path: '/mgagent/docs/architecture/dual-stack',
+                component: ComponentCreator('/mgagent/docs/architecture/dual-stack', '316'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/architecture/model-config',
-                component: ComponentCreator('/docs/architecture/model-config', '2aa'),
+                path: '/mgagent/docs/architecture/model-config',
+                component: ComponentCreator('/mgagent/docs/architecture/model-config', '0f6'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/architecture/overview',
-                component: ComponentCreator('/docs/architecture/overview', '833'),
+                path: '/mgagent/docs/architecture/overview',
+                component: ComponentCreator('/mgagent/docs/architecture/overview', '7d4'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/configuration/docker',
-                component: ComponentCreator('/docs/configuration/docker', '287'),
+                path: '/mgagent/docs/configuration/docker',
+                component: ComponentCreator('/mgagent/docs/configuration/docker', '7a0'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/configuration/environment-variables',
-                component: ComponentCreator('/docs/configuration/environment-variables', 'e8e'),
+                path: '/mgagent/docs/configuration/environment-variables',
+                component: ComponentCreator('/mgagent/docs/configuration/environment-variables', '8dd'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/configuration/nginx',
-                component: ComponentCreator('/docs/configuration/nginx', '9dc'),
+                path: '/mgagent/docs/configuration/nginx',
+                component: ComponentCreator('/mgagent/docs/configuration/nginx', '2ac'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/deployment/docker-deployment',
-                component: ComponentCreator('/docs/deployment/docker-deployment', 'e05'),
+                path: '/mgagent/docs/deployment/docker-deployment',
+                component: ComponentCreator('/mgagent/docs/deployment/docker-deployment', '119'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/deployment/local-development',
-                component: ComponentCreator('/docs/deployment/local-development', '8b0'),
+                path: '/mgagent/docs/deployment/local-development',
+                component: ComponentCreator('/mgagent/docs/deployment/local-development', '935'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/deployment/mysql-deployment',
-                component: ComponentCreator('/docs/deployment/mysql-deployment', '5d2'),
+                path: '/mgagent/docs/deployment/mysql-deployment',
+                component: ComponentCreator('/mgagent/docs/deployment/mysql-deployment', '2ff'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/deployment/production-deployment',
-                component: ComponentCreator('/docs/deployment/production-deployment', '933'),
+                path: '/mgagent/docs/deployment/production-deployment',
+                component: ComponentCreator('/mgagent/docs/deployment/production-deployment', '28c'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/development/api-reference',
-                component: ComponentCreator('/docs/development/api-reference', 'a86'),
+                path: '/mgagent/docs/development/api-reference',
+                component: ComponentCreator('/mgagent/docs/development/api-reference', '31d'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/development/project-structure',
-                component: ComponentCreator('/docs/development/project-structure', 'f96'),
+                path: '/mgagent/docs/development/project-structure',
+                component: ComponentCreator('/mgagent/docs/development/project-structure', '6ee'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/development/scripts',
-                component: ComponentCreator('/docs/development/scripts', '05d'),
+                path: '/mgagent/docs/development/scripts',
+                component: ComponentCreator('/mgagent/docs/development/scripts', 'e23'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/getting-started/configuration',
-                component: ComponentCreator('/docs/getting-started/configuration', '468'),
+                path: '/mgagent/docs/getting-started/configuration',
+                component: ComponentCreator('/mgagent/docs/getting-started/configuration', '813'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/getting-started/installation',
-                component: ComponentCreator('/docs/getting-started/installation', '267'),
+                path: '/mgagent/docs/getting-started/installation',
+                component: ComponentCreator('/mgagent/docs/getting-started/installation', '143'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/getting-started/quick-start',
-                component: ComponentCreator('/docs/getting-started/quick-start', '09c'),
+                path: '/mgagent/docs/getting-started/quick-start',
+                component: ComponentCreator('/mgagent/docs/getting-started/quick-start', '7bc'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/intro',
-                component: ComponentCreator('/docs/intro', '61d'),
+                path: '/mgagent/docs/intro',
+                component: ComponentCreator('/mgagent/docs/intro', 'e4b'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/troubleshooting/common-issues',
-                component: ComponentCreator('/docs/troubleshooting/common-issues', '944'),
+                path: '/mgagent/docs/troubleshooting/common-issues',
+                component: ComponentCreator('/mgagent/docs/troubleshooting/common-issues', '6c0'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               },
               {
-                path: '/docs/troubleshooting/faq',
-                component: ComponentCreator('/docs/troubleshooting/faq', '8fb'),
+                path: '/mgagent/docs/troubleshooting/faq',
+                component: ComponentCreator('/mgagent/docs/troubleshooting/faq', 'cb6'),
                 exact: true,
                 sidebar: "tutorialSidebar"
               }
@@ -181,8 +226,8 @@ export default [
     ]
   },
   {
-    path: '/',
-    component: ComponentCreator('/', '070'),
+    path: '/mgagent/',
+    component: ComponentCreator('/mgagent/', 'c8b'),
     exact: true
   },
   {

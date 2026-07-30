@@ -5,7 +5,7 @@
   "source": "@site/docs/architecture/dual-stack.md",
   "sourceDirName": "architecture",
   "slug": "/architecture/dual-stack",
-  "permalink": "/docs/architecture/dual-stack",
+  "permalink": "/mgagent/docs/architecture/dual-stack",
   "draft": false,
   "unlisted": false,
   "tags": [],
@@ -18,10 +18,10 @@
   "sidebar": "tutorialSidebar",
   "previous": {
     "title": "架构概述",
-    "permalink": "/docs/architecture/overview"
+    "permalink": "/mgagent/docs/architecture/overview"
   },
   "next": {
     "title": "数据库设计",
-    "permalink": "/docs/architecture/database"
+    "permalink": "/mgagent/docs/architecture/database"
   }
 }

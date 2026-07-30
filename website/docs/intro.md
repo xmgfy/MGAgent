@@ -77,26 +77,26 @@ slug: /intro
 
 ```mermaid
 flowchart TB
-    subgraph "用户层"
-        A[Chat 前端<br/>React + TypeScript]
-        B[Admin 前端<br/>React + TypeScript]
+    subgraph 用户层
+        A["Chat 前端<br/>React + TypeScript"]
+        B["Admin 前端<br/>React + TypeScript"]
     end
 
-    subgraph "API 层"
-        C[Chat 后端<br/>FastAPI :8000]
-        D[Admin 后端<br/>FastAPI :8001]
+    subgraph API层
+        C["Chat 后端<br/>FastAPI :8000"]
+        D["Admin 后端<br/>FastAPI :8001"]
     end
 
-    subgraph "数据层"
+    subgraph 数据层
         E[("SQLite / MySQL")]
         F[("ChromaDB / Milvus")]
     end
 
-    subgraph "AI 能力层"
+    subgraph AI能力层
         G[LangChain Agent]
         H[RAG Retriever]
         I[LLM Models]
-        J[Tools<br/>计算器/数据库查询]
+        J["Tools<br/>计算器/数据库查询"]
     end
 
     A --> C

@@ -11,7 +11,7 @@ const config = {
   url: 'https://xmgfy.github.io',
   // Set the /<baseUrl>/ pathname under which your site is served
   // For GitHub pages deployment, it is often '/<projectName>/'
-  baseUrl: '/',
+  baseUrl: '/mgagent',
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
@@ -19,7 +19,12 @@ const config = {
   projectName: 'mgagent', // Usually your repo name.
 
   onBrokenLinks: 'ignore',
-  onBrokenMarkdownLinks: 'warn',
+  onBrokenMarkdownLinks: 'ignore',
+
+  // Enable Mermaid diagrams
+  markdown: {
+    mermaid: true,
+  },
 
   // Even if you don't use internationalization, you can use this field to set
   // useful metadata like html lang. For example, if your site is Chinese, you
@@ -36,17 +41,9 @@ const config = {
       ({
         docs: {
           sidebarPath: require.resolve('./sidebars.js'),
-          // Please change this to your repo.
-          // Remove 'editUrl' to enable 'edit this page' links
-          // editUrl:
-          //   'https://github.com/your-github-username/mgagent/tree/main/website',
         },
         blog: {
           showReadingTime: true,
-          // Please change this to your repo.
-          // Remove 'editUrl' to enable 'edit this page' links
-          // editUrl:
-          //   'https://github.com/your-github-username/mgagent/tree/main/website',
         },
         theme: {
           customCss: require.resolve('./src/css/custom.css'),
@@ -122,9 +119,6 @@ const config = {
       },
       prism: {
         additionalLanguages: ['python', 'bash', 'yaml', 'sql', 'docker'],
-      },
-      markdown: {
-        mermaid: true,
       },
     }),
 

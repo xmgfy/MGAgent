@@ -5,7 +5,7 @@
   "source": "@site/docs/development/api-reference.md",
   "sourceDirName": "development",
   "slug": "/development/api-reference",
-  "permalink": "/docs/development/api-reference",
+  "permalink": "/mgagent/docs/development/api-reference",
   "draft": false,
   "unlisted": false,
   "tags": [],
@@ -18,10 +18,10 @@
   "sidebar": "tutorialSidebar",
   "previous": {
     "title": "脚本使用指南",
-    "permalink": "/docs/development/scripts"
+    "permalink": "/mgagent/docs/development/scripts"
   },
   "next": {
     "title": "环境变量配置",
-    "permalink": "/docs/configuration/environment-variables"
+    "permalink": "/mgagent/docs/configuration/environment-variables"
   }
 }

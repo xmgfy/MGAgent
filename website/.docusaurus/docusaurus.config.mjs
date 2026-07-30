@@ -8,10 +8,27 @@ export default {
   "tagline": "企业级智能体系统",
   "favicon": "img/favicon.ico",
   "url": "https://xmgfy.github.io",
-  "baseUrl": "/",
+  "baseUrl": "/mgagent/",
   "organizationName": "xmgfy",
   "projectName": "mgagent",
   "onBrokenLinks": "ignore",
+  "markdown": {
+    "mermaid": true,
+    "format": "mdx",
+    "emoji": true,
+    "mdx1Compat": {
+      "comments": true,
+      "admonitions": true,
+      "headingIds": true
+    },
+    "anchors": {
+      "maintainCase": false
+    },
+    "hooks": {
+      "onBrokenMarkdownLinks": "ignore",
+      "onBrokenMarkdownImages": "throw"
+    }
+  },
   "i18n": {
     "defaultLocale": "zh-Hans",
     "locales": [
@@ -252,9 +269,6 @@ export default {
         }
       ]
     },
-    "markdown": {
-      "mermaid": true
-    },
     "colorMode": {
       "defaultMode": "light",
       "disableSwitch": false,
@@ -327,22 +341,5 @@ export default {
   "stylesheets": [],
   "clientModules": [],
   "titleDelimiter": "|",
-  "noIndex": false,
-  "markdown": {
-    "format": "mdx",
-    "mermaid": false,
-    "emoji": true,
-    "mdx1Compat": {
-      "comments": true,
-      "admonitions": true,
-      "headingIds": true
-    },
-    "anchors": {
-      "maintainCase": false
-    },
-    "hooks": {
-      "onBrokenMarkdownLinks": "warn",
-      "onBrokenMarkdownImages": "throw"
-    }
-  }
+  "noIndex": false
 };

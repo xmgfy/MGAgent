@@ -1,154 +1,317 @@
 {
-  "/__docusaurus/debug-5ff": {
-    "__comp": "__comp---theme-debug-config-23-a-2ff",
+  "/mgagent/blog-41f": {
+    "__comp": "a6aa9e1f",
     "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/config-5ba": {
-    "__comp": "__comp---theme-debug-config-23-a-2ff",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/content-a2b": {
-    "__comp": "__comp---theme-debug-contentba-8-ce7",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
+      "plugin": "36994c47"
     },
-    "__props": "__props---docusaurus-debug-content-3-c-0-be2"
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "b2c73b95"
+      },
+      {
+        "content": "ff346e07"
+      },
+      {
+        "content": "c2959fc8"
+      },
+      {
+        "content": "cdc0eef8"
+      }
+    ],
+    "__props": "9104f2f4"
   },
-  "/__docusaurus/debug/globalData-c3c": {
-    "__comp": "__comp---theme-debug-global-dataede-0fa",
+  "/mgagent/blog/2026-04-release-b66": {
+    "__comp": "ccc49370",
     "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/metadata-156": {
-    "__comp": "__comp---theme-debug-site-metadata-68-e-3d4",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/registry-88c": {
-    "__comp": "__comp---theme-debug-registry-679-501",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/__docusaurus/debug/routes-000": {
-    "__comp": "__comp---theme-debug-routes-946-699",
-    "__context": {
-      "plugin": "plugin---docusaurus-debugb-38-ad3"
-    }
-  },
-  "/blog-98b": {
-    "__comp": "__comp---theme-blog-list-pagea-6-a-7ba",
-    "__context": {
-      "plugin": "plugin---blog-369-22e"
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
     },
-    "sidebar": "sidebar---blog-814-8ac",
-    "items": [],
-    "__props": "__props---blogc-15-573"
+    "sidebar": "814f3328",
+    "content": "78390cce"
   },
-  "/docs-566": {
-    "__comp": "__comp---theme-docs-root-5-e-9-0b6",
+  "/mgagent/blog/2026-05-release-63a": {
+    "__comp": "ccc49370",
     "__context": {
-      "plugin": "plugin---docsaba-d7c"
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "content": "48c44af9"
+  },
+  "/mgagent/blog/2026-06-release-0e0": {
+    "__comp": "ccc49370",
+    "__context": {
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "content": "bda81e27"
+  },
+  "/mgagent/blog/2026-07-release-7ad": {
+    "__comp": "ccc49370",
+    "__context": {
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "content": "121987a8"
+  },
+  "/mgagent/blog/archive-d94": {
+    "__comp": "9e4087bc",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "__props": "e0f5754c"
+  },
+  "/mgagent/blog/authors-864": {
+    "__comp": "621db11d",
+    "__context": {
+      "data": {
+        "blogMetadata": "acecf23e"
+      },
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "__props": "f95daf35"
+  },
+  "/mgagent/blog/tags-0be": {
+    "__comp": "01a85c17",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "__props": "ca7bb511"
+  },
+  "/mgagent/blog/tags/动态配置-03e": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "ff346e07"
+      }
+    ],
+    "__props": "1d5a2337"
+  },
+  "/mgagent/blog/tags/工具集成-5ad": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "c2959fc8"
+      }
+    ],
+    "__props": "e6646513"
+  },
+  "/mgagent/blog/tags/基础功能-0ad": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "cdc0eef8"
+      }
+    ],
+    "__props": "bfc94fbc"
+  },
+  "/mgagent/blog/tags/架构升级-280": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "b2c73b95"
+      }
+    ],
+    "__props": "86dfac08"
+  },
+  "/mgagent/blog/tags/文档-3ac": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "b2c73b95"
+      }
+    ],
+    "__props": "58827772"
+  },
+  "/mgagent/blog/tags/项目启动-81f": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "cdc0eef8"
+      }
+    ],
+    "__props": "f379f1b7"
+  },
+  "/mgagent/blog/tags/新功能-d15": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "b2c73b95"
+      },
+      {
+        "content": "ff346e07"
+      },
+      {
+        "content": "c2959fc8"
+      }
+    ],
+    "__props": "bed38bb3"
+  },
+  "/mgagent/blog/tags/性能优化-fa9": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "ff346e07"
+      }
+    ],
+    "__props": "efb68723"
+  },
+  "/mgagent/blog/tags/rag-8fb": {
+    "__comp": "6875c492",
+    "__context": {
+      "plugin": "36994c47"
+    },
+    "sidebar": "814f3328",
+    "items": [
+      {
+        "content": "c2959fc8"
+      }
+    ],
+    "__props": "16defb13"
+  },
+  "/mgagent/docs-64c": {
+    "__comp": "5e95c892",
+    "__context": {
+      "plugin": "aba21aa0"
     }
   },
-  "/docs-782": {
-    "__comp": "__comp---theme-doc-version-roota-7-b-5de",
-    "__props": "__props---docs-005-788"
+  "/mgagent/docs-95c": {
+    "__comp": "a7bd4aaa",
+    "__props": "d71ae452"
   },
-  "/docs-c01": {
-    "__comp": "__comp---theme-doc-roota-94-67a"
+  "/mgagent/docs-174": {
+    "__comp": "a94703ab"
   },
-  "/docs/architecture/database-d7f": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-architecture-databasef-6-d-32e"
+  "/mgagent/docs/architecture/database-bff": {
+    "__comp": "17896441",
+    "content": "f6da1e1d"
   },
-  "/docs/architecture/dual-stack-17a": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-architecture-dual-stack-3-a-9-0fb"
+  "/mgagent/docs/architecture/dual-stack-316": {
+    "__comp": "17896441",
+    "content": "3a9012a7"
   },
-  "/docs/architecture/model-config-2aa": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-architecture-model-config-726-85b"
+  "/mgagent/docs/architecture/model-config-0f6": {
+    "__comp": "17896441",
+    "content": "72687e5b"
   },
-  "/docs/architecture/overview-833": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-architecture-overview-0-b-1-a4c"
+  "/mgagent/docs/architecture/overview-7d4": {
+    "__comp": "17896441",
+    "content": "0b1ac180"
   },
-  "/docs/configuration/docker-287": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-configuration-docker-68-e-cbf"
+  "/mgagent/docs/configuration/docker-7a0": {
+    "__comp": "17896441",
+    "content": "68e2d950"
   },
-  "/docs/configuration/environment-variables-e8e": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-configuration-environment-variables-0-d-7-47b"
+  "/mgagent/docs/configuration/environment-variables-8dd": {
+    "__comp": "17896441",
+    "content": "0d77d396"
   },
-  "/docs/configuration/nginx-9dc": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-configuration-nginxa-20-b75"
+  "/mgagent/docs/configuration/nginx-2ac": {
+    "__comp": "17896441",
+    "content": "a204aef0"
   },
-  "/docs/deployment/docker-deployment-e05": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-deployment-docker-deployment-388-20e"
+  "/mgagent/docs/deployment/docker-deployment-119": {
+    "__comp": "17896441",
+    "content": "3884638b"
   },
-  "/docs/deployment/local-development-8b0": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-deployment-local-development-9-e-4-204"
+  "/mgagent/docs/deployment/local-development-935": {
+    "__comp": "17896441",
+    "content": "9e48dff4"
   },
-  "/docs/deployment/mysql-deployment-5d2": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-deployment-mysql-deployment-337-00f"
+  "/mgagent/docs/deployment/mysql-deployment-2ff": {
+    "__comp": "17896441",
+    "content": "3373e8a7"
   },
-  "/docs/deployment/production-deployment-933": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-deployment-production-deployment-03-d-9fe"
+  "/mgagent/docs/deployment/production-deployment-28c": {
+    "__comp": "17896441",
+    "content": "03d9dce7"
   },
-  "/docs/development/api-reference-a86": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-development-api-reference-1-f-8-e66"
+  "/mgagent/docs/development/api-reference-31d": {
+    "__comp": "17896441",
+    "content": "1f8515b6"
   },
-  "/docs/development/project-structure-f96": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-development-project-structureb-4-e-8df"
+  "/mgagent/docs/development/project-structure-6ee": {
+    "__comp": "17896441",
+    "content": "b4ee6ac2"
   },
-  "/docs/development/scripts-05d": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-development-scripts-338-045"
+  "/mgagent/docs/development/scripts-e23": {
+    "__comp": "17896441",
+    "content": "338d0709"
   },
-  "/docs/getting-started/configuration-468": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-getting-started-configuration-009-150"
+  "/mgagent/docs/getting-started/configuration-813": {
+    "__comp": "17896441",
+    "content": "009f1e98"
   },
-  "/docs/getting-started/installation-267": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-getting-started-installation-54-f-18d"
+  "/mgagent/docs/getting-started/installation-143": {
+    "__comp": "17896441",
+    "content": "54f44165"
   },
-  "/docs/getting-started/quick-start-09c": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-getting-started-quick-start-588-94b"
+  "/mgagent/docs/getting-started/quick-start-7bc": {
+    "__comp": "17896441",
+    "content": "588bd741"
   },
-  "/docs/intro-61d": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-intro-0-e-3-be1"
+  "/mgagent/docs/intro-e4b": {
+    "__comp": "17896441",
+    "content": "0e384e19"
   },
-  "/docs/troubleshooting/common-issues-944": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-troubleshooting-common-issues-513-ef6"
+  "/mgagent/docs/troubleshooting/common-issues-6c0": {
+    "__comp": "17896441",
+    "content": "5133d60e"
   },
-  "/docs/troubleshooting/faq-8fb": {
-    "__comp": "__comp---theme-doc-item-178-a40",
-    "content": "content---docs-troubleshooting-faq-56-c-70d"
+  "/mgagent/docs/troubleshooting/faq-cb6": {
+    "__comp": "17896441",
+    "content": "56c19fd2"
   },
-  "/-070": {
-    "__comp": "__comp---site-src-pages-index-jsx-9-dd-cb1",
+  "/mgagent/-c8b": {
+    "__comp": "9dd8a0d2",
     "__context": {
-      "plugin": "plugin---a-74-9d6"
+      "plugin": "a7456010"
     },
-    "config": "config---5-e-9-4f3"
+    "config": "5e9f5e1a"
   }
 }

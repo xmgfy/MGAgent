@@ -5,7 +5,7 @@
   "source": "@site/docs/architecture/database.md",
   "sourceDirName": "architecture",
   "slug": "/architecture/database",
-  "permalink": "/docs/architecture/database",
+  "permalink": "/mgagent/docs/architecture/database",
   "draft": false,
   "unlisted": false,
   "tags": [],
@@ -18,10 +18,10 @@
   "sidebar": "tutorialSidebar",
   "previous": {
     "title": "双技术栈架构",
-    "permalink": "/docs/architecture/dual-stack"
+    "permalink": "/mgagent/docs/architecture/dual-stack"
   },
   "next": {
     "title": "模型配置",
-    "permalink": "/docs/architecture/model-config"
+    "permalink": "/mgagent/docs/architecture/model-config"
   }
 }

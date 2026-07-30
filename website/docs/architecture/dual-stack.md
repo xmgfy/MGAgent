@@ -24,34 +24,65 @@ MGAgent 独创双技术栈架构，通过统一接口抽象和工厂模式，实
 
 ## 架构示意图
 
+### 方案1：SQLite + ChromaDB（轻量级单机部署）
+
 ```mermaid
-flowchart LR
-    subgraph "方案1：SQLite + ChromaDB (DATABASE_SCHEME=sqlite)"
-        direction TB
-        A1[mgagent-backend] --> B1[(SQLite)]
-        A1 --> C1[(ChromaDB)]
-        A2[mgagent-admin-backend] --> B2[(SQLite)]
-        A2 --> C2[(ChromaDB)]
+flowchart TB
+    subgraph L1["应用层 Application Layer"]
+        A1[mgagent-backend]
+        A2[mgagent-admin-backend]
     end
 
-    subgraph "方案2：MySQL + Milvus (DATABASE_SCHEME=mysql)"
-        direction TB
-        D1[mgagent-backend] --> E1[(MySQL 8.0)]
-        D1 --> F1[(Milvus 2.4)]
-        D2[mgagent-admin-backend] --> E2[(MySQL 8.0)]
-        D2 --> F2[(Milvus 2.4)]
-        E1 & E2 --> G[(etcd)]
-        F1 & F2 --> H[(MinIO)]
+    subgraph L2["存储层 Storage Layer"]
+        B1[("SQLite<br/>关系数据库")]
+        C1[("ChromaDB<br/>向量数据库")]
     end
 
-    style B1 fill:#90EE90
-    style C1 fill:#90EE90
-    style B2 fill:#90EE90
-    style C2 fill:#90EE90
-    style E1 fill:#87CEEB
-    style F1 fill:#87CEEB
-    style E2 fill:#87CEEB
-    style F2 fill:#87CEEB
+    A1 --> B1
+    A1 --> C1
+    A2 --> B1
+    A2 --> C1
+
+    classDef appLayer fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    classDef storageLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+
+    class L1 appLayer
+    class L2 storageLayer
+```
+
+### 方案2：MySQL + Milvus（高性能生产部署）
+
+```mermaid
+flowchart TB
+    subgraph L3["应用层 Application Layer"]
+        D1[mgagent-backend]
+        D2[mgagent-admin-backend]
+    end
+
+    subgraph L4["存储层 Storage Layer"]
+        E1[("MySQL 8.0<br/>关系数据库")]
+        F1[("Milvus 2.4<br/>向量数据库")]
+    end
+
+    subgraph L5["依赖层 Dependencies"]
+        G[("etcd")]
+        H[("MinIO")]
+    end
+
+    D1 --> E1
+    D1 --> F1
+    D2 --> E1
+    D2 --> F1
+    E1 --> G
+    F1 --> H
+
+    classDef appLayer fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
+    classDef storageLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
+    classDef dependencyLayer fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
+
+    class L3 appLayer
+    class L4 storageLayer
+    class L5 dependencyLayer
 ```
 
 ## 切换机制
