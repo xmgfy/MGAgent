@@ -12,8 +12,8 @@ MGAgent 提供两种 Docker Compose 部署方案：
 
 | 方案 | Compose 文件 | 适用场景 |
 |------|-------------|---------|
-| SQLite + ChromaDB | `docker-compose.local.yml` | 快速体验、单机部署 |
-| MySQL + Milvus | `docker-compose.infra.yml` + `docker-compose.mysql-app.yml` | 生产环境、大规模数据 |
+| SQLite + ChromaDB | `docker-compose.prod.yml` | 快速体验、单机部署 |
+| MySQL + Milvus | `docker-compose.infra.yml` + `docker-compose.prod.yml` | 生产环境、大规模数据 |
 
 ## 方式一：一键部署脚本（推荐）
 
@@ -35,16 +35,16 @@ chmod +x scripts/deploy.sh
 
 ```bash
 # 构建并启动所有服务
-docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # 查看服务状态
-docker compose -f docker-compose.local.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 # 查看日志
-docker compose -f docker-compose.local.yml logs -f
+docker compose -f docker-compose.prod.yml logs -f
 
 # 停止服务
-docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.prod.yml down
 ```
 
 ### 服务列表
@@ -59,8 +59,9 @@ docker compose -f docker-compose.local.yml down
 ### 环境变量
 
 ```yaml
+env_file:
+  - .env.sqlite
 environment:
-  - DATABASE_SCHEME=sqlite
   - SQLITE_DB_PATH=./data/sqlite/app.db
   - CHROMA_PATH=./data/chroma
   - DEBUG=True
@@ -70,7 +71,7 @@ environment:
 
 ## Docker Compose 文件详解
 
-### docker-compose.local.yml
+### docker-compose.prod.yml
 
 SQLite + ChromaDB 全栈配置，包含所有 4 个服务：
 
@@ -80,8 +81,9 @@ services:
     build:
       context: ./mgagent-backend
       dockerfile: Dockerfile
+    env_file:
+      - .env.sqlite
     environment:
-      - DATABASE_SCHEME=sqlite
       - SQLITE_DB_PATH=./data/sqlite/app.db
       - CHROMA_PATH=./data/chroma
     volumes:
@@ -139,7 +141,7 @@ services:
       - "8003:3000"
 ```
 
-### docker-compose.mysql-app.yml
+### docker-compose.prod.yml（MySQL 方案）
 
 MySQL + Milvus 应用层配置：
 
@@ -148,8 +150,9 @@ services:
   mgagent-backend:
     build:
       context: ./mgagent-backend
+    env_file:
+      - .env.mysql
     environment:
-      - DATABASE_SCHEME=mysql
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MILVUS_HOST=milvus
@@ -175,22 +178,22 @@ services:
 
 ```bash
 # 启动服务
-docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # 重新构建并启动
-docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # 停止服务
-docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.prod.yml down
 
 # 查看日志
-docker compose -f docker-compose.local.yml logs -f --tail=100
+docker compose -f docker-compose.prod.yml logs -f --tail=100
 
 # 进入容器
 docker exec -it mgagent-backend bash
 
 # 清理所有数据
-docker compose -f docker-compose.local.yml down -v
+docker compose -f docker-compose.prod.yml down -v
 
 # 查看资源使用
 docker stats

@@ -123,7 +123,7 @@ flowchart TB
 git clone https://github.com/xmgfy/MGAgent.git
 cd MGAgent
 
-# 一键部署（推荐）
+# 一键生产部署（推荐）
 ./scripts/deploy.sh sqlite
 
 # 或本地开发模式

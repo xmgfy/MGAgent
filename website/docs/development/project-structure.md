@@ -114,12 +114,11 @@ MGAgent/
 │   ├── start-all.sh              # 一键启动本地服务
 │   ├── stop-all.sh               # 一键停止本地服务
 │   ├── status.sh                 # 服务状态检查
-│   ├── deploy.sh                 # 一键 Docker 部署
+│   ├── deploy.sh                 # 一键生产部署
 │   └── docker-services.sh        # 基础设施服务管理
 │
-├── docker-compose.local.yml      # SQLite + ChromaDB 全栈配置
+├── docker-compose.prod.yml       # 生产环境全栈配置
 ├── docker-compose.infra.yml      # MySQL + Milvus 基础设施
-├── docker-compose.mysql-app.yml  # MySQL + Milvus 应用层
 ├── .env.example                  # 环境变量模板
 └── README.md
 ```
@@ -128,15 +127,16 @@ MGAgent/
 
 | 文件 | 说明 |
 |------|------|
-| `app/config/config.py` | 统一配置模块，支持 `DATABASE_SCHEME` 切换 |
+| `app/config/config.py` | 统一配置模块，支持 `.env.sqlite` / `.env.mysql` 切换 |
 | `app/db/database.py` | 数据库工厂，动态创建 SQLite 或 MySQL 引擎 |
 | `app/rag/vector_factory.py` | 向量数据库工厂，动态创建 ChromaDB 或 Milvus 实例 |
 | `app/services/model_config_service.py` | 模型配置服务，从数据库读取和管理模型配置 |
 | `app/agent/core.py` | Agent 核心逻辑，工具调用和对话处理 |
-| `docker-compose.local.yml` | SQLite + ChromaDB 全栈 Docker Compose 配置 |
+| `docker-compose.prod.yml` | 生产环境全栈 Docker Compose 配置 |
 | `docker-compose.infra.yml` | MySQL + Milvus 基础设施 Docker Compose 配置 |
-| `docker-compose.mysql-app.yml` | MySQL + Milvus 应用层 Docker Compose 配置 |
-| `scripts/deploy.sh` | 一键 Docker 部署脚本 |
+| `.env.sqlite` | SQLite 方案环境变量文件 |
+| `.env.mysql` | MySQL 方案环境变量文件 |
+| `scripts/deploy.sh` | 一键生产部署脚本 |
 | `scripts/docker-services.sh` | Docker 基础设施服务管理脚本 |
 | `scripts/init.sh` | 一键项目初始化脚本 |
 | `scripts/start-all.sh` | 本地开发一键启动脚本 |
@@ -163,7 +163,7 @@ async def startup():
 async def health():
     return {
         "status": "ok",
-        "scheme": settings.DATABASE_SCHEME
+        "env_file": settings.ENV_FILE
     }
 ```
 
@@ -172,7 +172,7 @@ async def health():
 ```python
 # app/db/database.py
 def init_engine():
-    if is_mysql_scheme():
+    if is_mysql_env():
         engine = _create_mysql_engine()
     else:
         engine = _create_sqlite_engine()
@@ -183,7 +183,7 @@ def init_engine():
 ```python
 # app/rag/vector_factory.py
 def create_vector_db():
-    if is_mysql_scheme():
+    if is_mysql_env():
         return MilvusService()
     return ChromaDBService()
 ```

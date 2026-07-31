@@ -14,9 +14,8 @@ MGAgent 使用 Docker Compose 进行容器化部署，支持 SQLite 和 MySQL �
 
 | 文件 | 用途 | 包含服务 |
 |------|------|---------|
-| `docker-compose.local.yml` | SQLite + ChromaDB 全栈 | 4 个应用服务 |
+| `docker-compose.prod.yml` | 生产环境全栈 | 4 个应用服务 |
 | `docker-compose.infra.yml` | MySQL + Milvus 基础设施 | 5 个基础设施服务 |
-| `docker-compose.mysql-app.yml` | MySQL + Milvus 应用层 | 4 个应用服务 |
 
 ## Docker 镜像源配置
 
@@ -93,7 +92,7 @@ networks:
 
 ### SQLite 方案
 
-`docker-compose.local.yml` 内部自动创建网络：
+`docker-compose.prod.yml` 内部自动创建网络：
 
 ```yaml
 networks:
@@ -112,7 +111,7 @@ networks:
     driver: bridge
     name: mgagent-network
 
-# docker-compose.mysql-app.yml
+# docker-compose.prod.yml
 networks:
   mgagent-network:
     external: true
@@ -296,13 +295,13 @@ services:
 
 ```bash
 # SQLite 方案
-docker compose -f docker-compose.local.yml logs -f --tail=100
+docker compose -f docker-compose.prod.yml logs -f --tail=100
 
 # MySQL 基础设施
 docker compose -f docker-compose.infra.yml logs -f --tail=50
 
 # MySQL 应用层
-docker compose -f docker-compose.mysql-app.yml logs -f --tail=50
+docker compose -f docker-compose.prod.yml logs -f --tail=50
 
 # 单个服务日志
 docker logs mgagent-backend --tail=100 -f
@@ -312,16 +311,16 @@ docker logs mgagent-backend --tail=100 -f
 
 ```bash
 # 启动服务
-docker compose -f docker-compose.local.yml up -d
+docker compose -f docker-compose.prod.yml up -d
 
 # 构建并启动
-docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # 停止服务
-docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.prod.yml down
 
 # 重启服务
-docker compose -f docker-compose.local.yml restart
+docker compose -f docker-compose.prod.yml restart
 
 # 进入容器
 docker exec -it mgagent-backend bash
@@ -330,13 +329,13 @@ docker exec -it mgagent-backend bash
 docker stats
 
 # 清理所有容器（保留数据卷）
-docker compose -f docker-compose.local.yml down
+docker compose -f docker-compose.prod.yml down
 
 # 清理所有容器和数据卷
-docker compose -f docker-compose.local.yml down -v
+docker compose -f docker-compose.prod.yml down -v
 
 # 查看容器状态
-docker compose -f docker-compose.local.yml ps
+docker compose -f docker-compose.prod.yml ps
 ```
 
 ## 常见问题

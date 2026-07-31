@@ -8,40 +8,40 @@ slug: /getting-started/configuration
 
 ## 技术栈选择
 
-MGAgent 支持两套技术栈方案，通过 `DATABASE_SCHEME` 环境变量切换：
+MGAgent 支持两套技术栈方案，通过不同的环境配置文件切换：
 
 ### 方案对比
 
 | 特性 | SQLite + ChromaDB | MySQL + Milvus |
 |------|-------------------|----------------|
-| 环境变量 | `DATABASE_SCHEME=sqlite` | `DATABASE_SCHEME=mysql` |
+| 配置文件 | `.env.sqlite` | `.env.mysql` |
 | 关系数据库 | SQLite 3.x | MySQL 8.0 |
 | 向量数据库 | ChromaDB 0.5+ | Milvus 2.4 |
 | 适用场景 | 单机开发调试 | 生产级部署 |
 | 部署复杂度 | 简单 | 中等 |
-| Compose 文件 | `docker-compose.local.yml` | `docker-compose.infra.yml` + `docker-compose.mysql-app.yml` |
+| Compose 文件 | 无需 Docker | `docker-compose.prod.yml` |
 
 ### 切换方式
 
-#### 环境变量
+#### 本地开发（推荐）
 
 ```bash
-# SQLite 方案（默认）
-export DATABASE_SCHEME=sqlite
+# SQLite 方案（默认，无需 Docker）
+./scripts/start-all.sh sqlite
 
-# MySQL 方案
-export DATABASE_SCHEME=mysql
+# MySQL 方案（需先启动基础设施）
+./scripts/docker-services.sh start
+./scripts/start-all.sh mysql
 ```
 
-#### Docker Compose
+#### 生产部署
 
 ```bash
-# SQLite 方案
-docker compose -f docker-compose.local.yml up -d
+# 生产环境一键部署
+./scripts/deploy.sh up
 
-# MySQL 方案（分层部署）
-docker compose -f docker-compose.infra.yml up -d
-docker compose -f docker-compose.mysql-app.yml up -d
+# 或手动使用 Docker Compose
+docker compose -f docker-compose.prod.yml --env-file .env.production up -d
 ```
 
 ## 模型配置
@@ -114,17 +114,21 @@ GET /model/test
 
 ### 自定义端口
 
-通过环境变量文件修改端口配置：
+通过 `.env.production` 文件修改端口配置：
 
 ```bash
-# 创建配置文件
-cat > .env.prod << 'EOF'
-BACKEND_PORT=8000
-ADMIN_BACKEND_PORT=8001
-FRONTEND_PORT=3000
+# 复制生产环境配置模板
+cp .env.production.example .env.production
+
+# 编辑配置
+cat >> .env.production << 'EOF'
+CHAT_FRONTEND_PORT=3000
 ADMIN_FRONTEND_PORT=3001
+CHAT_BACKEND_PORT=8000
+ADMIN_BACKEND_PORT=8001
 MYSQL_PORT=3306
 MILVUS_PORT=19530
+ATTU_PORT=8003
 EOF
 ```
 
@@ -133,24 +137,26 @@ EOF
 ### MySQL 方案
 
 ```bash
+# 编辑 .env.mysql 或 .env.production
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=mgagent
-MYSQL_PASSWORD=mgagent_password_2024
+MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=mgagent
 ```
 
 ### SQLite 方案
 
 ```bash
-SQLITE_DB_PATH=./data/app.db
-CHROMA_PERSIST_DIR=./data/chroma
+# 编辑 .env.sqlite
+SQLITE_DB_PATH=data/chat.db
+CHROMA_PERSIST_DIR=data/chroma
 ```
 
 ## 调试配置
 
 ```bash
-# 启用调试模式
+# 启用调试模式（在 .env.sqlite 中）
 DEBUG=True
 
 # 设置 API 地址

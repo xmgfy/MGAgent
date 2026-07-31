@@ -34,7 +34,6 @@ vim .env
 
 | 变量 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `DATABASE_SCHEME` | `sqlite` / `mysql` | `sqlite` | 技术栈方案选择 |
 | `API_HOST` | String | `0.0.0.0` | Chat 后端监听地址 |
 | `API_PORT` | Int | `8000` | Chat 后端监听端口 |
 | `ADMIN_API_URL` | String | `http://localhost:8001/admin/api` | Admin API 地址 |
@@ -86,84 +85,93 @@ vim .env
 ### SQLite 方案（最简配置）
 
 ```bash
-# .env 文件
-DATABASE_SCHEME=sqlite
-DEBUG=True
+# 复制 SQLite 模式配置
+cp .env.sqlite .env
 ```
 
 ### MySQL 方案
 
 ```bash
-# .env 文件
+# 复制 MySQL 模式配置
+cp .env.mysql .env
+```
+
+### Docker 环境
+
+生产环境使用 `docker-compose.prod.yml`，通过 `.env.production` 文件传递环境变量：
+
+```yaml
+# docker-compose.prod.yml
+services:
+  mgagent-backend:
+    environment:
+      - DATABASE_SCHEME=mysql
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MILVUS_HOST=milvus
+      - MILVUS_PORT=19530
+      - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
+      - DEBUG=False
+```
+
+## 配置模板
+
+### .env.sqlite（SQLite 模式）
+
+```bash
+# MGAgent SQLite 模式配置
+# 适用于本地调试，无需外部数据库服务
+
+DATABASE_SCHEME=sqlite
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
+
+# SQLite 配置
+SQLITE_DB_PATH=data/chat.db
+CHROMA_PERSIST_DIR=data/chroma
+
+# Admin API 地址
+ADMIN_API_URL=http://localhost:8001/admin/api
+
+# 文档存储目录
+DOCUMENT_DIR=data/documents
+```
+
+### .env.mysql（MySQL 模式）
+
+```bash
+# MGAgent MySQL 模式配置
+# 适用于生产级部署，需要 MySQL + Milvus 基础设施服务
+
 DATABASE_SCHEME=mysql
+API_HOST=0.0.0.0
+API_PORT=8000
+DEBUG=True
+
+# MySQL 配置
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=mgagent
 MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=mgagent
+
+# Milvus 配置
 MILVUS_HOST=localhost
 MILVUS_PORT=19530
-DEBUG=False
-```
-
-### Docker 环境
-
-Docker Compose 通过 `environment` 关键字传递环境变量：
-
-```yaml
-# docker-compose.local.yml
-services:
-  mgagent-backend:
-    environment:
-      - DATABASE_SCHEME=sqlite
-      - SQLITE_DB_PATH=./data/sqlite/app.db
-      - CHROMA_PATH=./data/chroma
-      - DEBUG=True
-```
-
-## 配置模板
-
-### .env.example
-
-```bash
-# MGAgent 环境变量配置示例
-# 复制此文件为 .env 并修改配置
-
-# 技术栈方案: sqlite 或 mysql
-DATABASE_SCHEME=sqlite
-
-# 后端服务配置
-API_HOST=0.0.0.0
-API_PORT=8000
-DEBUG=True
+MILVUS_COLLECTION=mgagent_knowledge
 
 # Admin API 地址
 ADMIN_API_URL=http://localhost:8001/admin/api
 
-# JWT 密钥（生产环境请使用固定值）
-# SECRET_KEY=your_secret_key_here
-
-# SQLite 配置（DATABASE_SCHEME=sqlite 时使用）
-SQLITE_DB_PATH=./data/app.db
-CHROMA_PERSIST_DIR=./data/chroma
-
-# MySQL 配置（DATABASE_SCHEME=mysql 时使用）
-# MYSQL_HOST=localhost
-# MYSQL_PORT=3306
-# MYSQL_USER=mgagent
-# MYSQL_PASSWORD=your_password
-# MYSQL_DATABASE=mgagent
-
-# Milvus 配置（DATABASE_SCHEME=mysql 时使用）
-# MILVUS_HOST=localhost
-# MILVUS_PORT=19530
-# MILVUS_COLLECTION=mgagent_knowledge
-
 # 文档存储目录
-DOCUMENT_DIR=./data/documents
+DOCUMENT_DIR=data/documents
 ```
 
-### .env.prod（生产环境）
+### .env.production（生产环境）
 
 ```bash
 # MySQL 配置
@@ -177,14 +185,16 @@ MYSQL_PORT=3306
 MILVUS_PORT=19530
 MILVUS_GRPC_PORT=9091
 
-# 服务端口
-BACKEND_PORT=8000
-ADMIN_BACKEND_PORT=8001
-FRONTEND_PORT=3000
-ADMIN_FRONTEND_PORT=3001
+# MinIO 配置
+MINIO_ACCESS_KEY=your_minio_access_key
+MINIO_SECRET_KEY=your_minio_secret_key
 
-# 调试模式关闭
-DEBUG=False
+# 服务端口
+CHAT_FRONTEND_PORT=3000
+ADMIN_FRONTEND_PORT=3001
+CHAT_BACKEND_PORT=8000
+ADMIN_BACKEND_PORT=8001
+ATTU_PORT=8003
 ```
 
 ## 代码中使用
@@ -195,10 +205,9 @@ DEBUG=False
 from app.config.config import settings
 
 # 读取基础配置
-print(settings.DATABASE_SCHEME)  # "sqlite"
 print(settings.API_PORT)         # 8000
 
-# 条件判断
+# 根据模式判断
 if settings.DATABASE_SCHEME == "mysql":
     # MySQL 方案
     pass
@@ -219,35 +228,18 @@ url = get_database_url()
 
 ## 环境变量与 Docker
 
-### docker-compose.local.yml
+### docker-compose.prod.yml（生产环境）
 
 ```yaml
 services:
   mgagent-backend:
     environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
-      - DATABASE_SCHEME=sqlite
-      - SQLITE_DB_PATH=./data/sqlite/app.db
-      - CHROMA_PATH=./data/chroma
-      - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
-      - DEBUG=True
-```
-
-### docker-compose.mysql-app.yml
-
-```yaml
-services:
-  mgagent-backend:
-    environment:
-      - API_HOST=0.0.0.0
-      - API_PORT=8000
       - DATABASE_SCHEME=mysql
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_USER=${MYSQL_USER:-mgagent}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-mgagent_password_2024}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-mgagent}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
       - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api

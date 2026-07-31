@@ -18,7 +18,7 @@ MGAgent 在 `scripts/` 目录下提供了一系列工具脚本，用于简化部
 | `start-all.sh` | 启动本地开发服务 | 本地开发 |
 | `stop-all.sh` | 停止本地开发服务 | 本地开发 |
 | `status.sh` | 检查服务状态 | 运维监控 |
-| `deploy.sh` | 一键 Docker 部署 | 生产部署 |
+| `deploy.sh` | 一键生产部署 | 生产环境部署 |
 | `docker-services.sh` | 基础设施服务管理 | MySQL 方案 |
 
 ## init.sh - 项目初始化
@@ -208,9 +208,9 @@ mgagent-backend:
 /dev/disk1s1    500Gi   200Gi  300Gi    40%    /Users/xmg/...
 ```
 
-## deploy.sh - Docker 部署
+## deploy.sh - 生产部署
 
-一键 Docker 部署脚本，支持 SQLite 和 MySQL 两种方案。
+一键 Docker 生产部署脚本，支持 SQLite 和 MySQL 两种数据库方案，自动完成环境检查、镜像构建和服务启动。
 
 ### 使用方法
 
@@ -253,9 +253,10 @@ flowchart LR
 
 - 彩色输出，清晰易懂
 - 支持交互式选择方案
-- MySQL 方案自动分层部署
-- 自动创建默认配置文件
+- MySQL 方案自动分层部署（基础设施 + 应用层）
+- 自动创建默认配置文件（`.env.sqlite` / `.env.mysql`）
 - 健康检查验证
+- 支持 SQLite 和 MySQL 双方案一键切换
 
 ### 输出示例
 
@@ -351,10 +352,10 @@ flowchart LR
 ./scripts/status.sh          # 检查
 ./scripts/stop-all.sh        # 停止
 
-# Docker 部署（SQLite 方案）
+# 生产部署（SQLite 方案）
 ./scripts/deploy.sh sqlite
 
-# Docker 部署（MySQL 方案）
+# 生产部署（MySQL 方案）
 ./scripts/docker-services.sh start    # 先启动基础设施
 ./scripts/deploy.sh mysql             # 再启动应用
 

@@ -19,8 +19,8 @@ MGAgent 独创双技术栈架构，通过统一接口抽象和工厂模式，实
 | 适用场景 | 轻量级单机部署，开发调试 | 高性能生产部署，大规模数据 |
 | 部署复杂度 | 简单（无需外部依赖） | 中等（依赖 MySQL、Milvus 等） |
 | 性能 | 单机性能，适合小规模数据 | 高并发，支持大数据量 |
-| Compose 文件 | `docker-compose.local.yml` | `docker-compose.infra.yml` + `docker-compose.mysql-app.yml` |
-| 环境变量 | `DATABASE_SCHEME=sqlite` | `DATABASE_SCHEME=mysql` |
+| Compose 文件 | 无需 Docker | `docker-compose.prod.yml` |
+| 环境变量 | `.env.sqlite` | `.env.mysql` |
 
 ## 架构示意图
 
@@ -89,14 +89,14 @@ flowchart TB
 
 ### 1. 环境变量配置
 
-通过设置 `DATABASE_SCHEME` 环境变量来选择技术栈：
+通过复制不同的环境配置文件来选择技术栈：
 
 ```bash
 # 方案1：SQLite + ChromaDB（默认）
-export DATABASE_SCHEME=sqlite
+cp .env.sqlite .env
 
 # 方案2：MySQL + Milvus
-export DATABASE_SCHEME=mysql
+cp .env.mysql .env
 ```
 
 ### 2. 代码层面切换
@@ -156,13 +156,7 @@ def create_vector_db():
 `app/config/config.py` 集中管理两套方案的所有配置：
 
 ```python
-class DatabaseScheme(str, Enum):
-    SQLITE = "sqlite"
-    MYSQL = "mysql"
-
 class Settings(BaseSettings):
-    DATABASE_SCHEME: str = os.getenv("DATABASE_SCHEME", "sqlite")
-
     # SQLite 配置
     SQLITE_DB_PATH: str = "data/chat.db"
     CHROMA_PERSIST_DIR: str = "data/chroma"
@@ -183,14 +177,15 @@ class Settings(BaseSettings):
 ### 3. Docker Compose 切换
 
 ```bash
-# SQLite 方案（单一 Compose 文件）
-docker compose -f docker-compose.local.yml up -d
+# 生产环境部署（包含所有服务）
+./scripts/deploy.sh up
 
-# MySQL 方案（分层部署）
-# 第一步：启动基础设施
-docker compose -f docker-compose.infra.yml up -d
-# 第二步：启动应用层
-docker compose -f docker-compose.mysql-app.yml up -d
+# 本地开发（SQLite 模式，无需 Docker）
+./scripts/start-all.sh sqlite
+
+# 本地开发（MySQL 模式，需先启动基础设施）
+./scripts/docker-services.sh start
+./scripts/start-all.sh mysql
 ```
 
 ## 技术栈详细对比

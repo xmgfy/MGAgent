@@ -110,12 +110,14 @@ chmod +x scripts/init.sh
 ```bash
 # Chat 后端 (端口: 8000)
 cd mgagent-backend
-export DATABASE_SCHEME=sqlite
+# 使用 .env.sqlite 配置
+source .env.sqlite
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Admin 后端 (端口: 8001)
 cd mgagent-admin-backend
-export DATABASE_SCHEME=sqlite
+# 使用 .env.sqlite 配置
+source .env.sqlite
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 # Chat 前端 (端口: 5173)
@@ -140,13 +142,13 @@ npm run dev
 
 ```bash
 # SQLite + ChromaDB 方案
-docker compose -f docker-compose.local.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # MySQL + Milvus 方案（分层部署）
 # 第一步：启动基础设施
 docker compose -f docker-compose.infra.yml up -d
 # 第二步：启动应用层
-docker compose -f docker-compose.mysql-app.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ## 配置模型

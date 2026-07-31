@@ -1,373 +1,295 @@
 #!/bin/bash
 
-# MGAgent 一键部署脚本
-# 支持两套技术栈方案：
-#   方案1: SQLite + ChromaDB (docker-compose.local.yml)
-#   方案2: MySQL + Milvus (docker-compose.infra.yml + docker-compose.mysql-app.yml)
+# ============================================
+# MGAgent 生产环境部署脚本
+# 适用于生产环境一键部署
+#
+# 用法:
+#   ./scripts/deploy.sh up          启动所有服务
+#   ./scripts/deploy.sh down        停止所有服务
+#   ./scripts/deploy.sh restart     重启所有服务
+#   ./scripts/deploy.sh status      查看服务状态
+#   ./scripts/deploy.sh logs        查看日志
+#   ./scripts/deploy.sh build       重新构建镜像
+#   ./scripts/deploy.sh cleanup     清理所有容器和数据卷
+#   ./scripts/deploy.sh help        显示帮助
+# ============================================
 
 set -e
-
-# 路径定义
-SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
 # 颜色定义
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
-NC='\033[0m' # No Color
+CYAN='\033[0;36m'
+NC='\033[0m'
 
-# 打印函数
-print_banner() {
-    echo -e "${BLUE}"
-    echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                    MGAgent 一键部署脚本                      ║"
-    echo "╚══════════════════════════════════════════════════════════════╝"
-    echo -e "${NC}"
+# 路径配置
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+COMPOSE_FILE="$PROJECT_DIR/docker-compose.prod.yml"
+ENV_FILE="$PROJECT_DIR/.env.production"
+
+# 显示帮助
+show_help() {
+    echo -e "${BLUE}MGAgent 生产环境部署脚本${NC}"
+    echo ""
+    echo "用法: $0 <命令>"
+    echo ""
+    echo "命令列表:"
+    echo "  up        启动所有服务（首次会构建镜像）"
+    echo "  down      停止所有服务"
+    echo "  restart   重启所有服务"
+    echo "  status    查看服务运行状态"
+    echo "  logs      查看服务日志"
+    echo "  build     重新构建应用镜像"
+    echo "  cleanup   清理所有容器和数据卷（不可恢复）"
+    echo "  help      显示帮助信息"
+    echo ""
+    echo -e "${CYAN}前置条件:${NC}"
+    echo "  1. 已安装 Docker 和 Docker Compose"
+    echo "  2. 已配置 .env.production 环境变量文件"
+    echo "  3. 端口未被占用（默认: 3000, 3001, 8000, 8001, 3306, 19530）"
+    echo ""
+    echo -e "${CYAN}快速开始:${NC}"
+    echo "  # 1. 复制环境配置模板"
+    echo "  cp .env.production.example .env.production"
+    echo ""
+    echo "  # 2. 修改生产环境配置（密码、域名等）"
+    echo "  vim .env.production"
+    echo ""
+    echo "  # 3. 启动服务"
+    echo "  ./scripts/deploy.sh up"
 }
 
-print_info() {
-    echo -e "${GREEN}[INFO]${NC} $1"
-}
-
-print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
-
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
-
-# 检查 Docker 是否安装
-check_docker() {
+# 检查环境
+check_env() {
+    echo -e "${YELLOW}检查环境...${NC}"
+    
+    # 检查 Docker
     if ! command -v docker &> /dev/null; then
-        print_error "Docker 未安装，请先安装 Docker"
-        echo "安装指南: https://docs.docker.com/get-docker/"
+        echo -e "${RED}❌ 未找到 Docker${NC}"
+        echo "请先安装 Docker: https://docs.docker.com/get-docker/"
         exit 1
     fi
     
-    if ! command -v docker-compose &> /dev/null && ! docker compose version &> /dev/null; then
-        print_error "Docker Compose 未安装，请先安装 Docker Compose"
-        echo "安装指南: https://docs.docker.com/compose/install/"
+    if ! docker info >/dev/null 2>&1; then
+        echo -e "${RED}❌ Docker 未运行${NC}"
+        echo "请启动 Docker 服务"
         exit 1
     fi
     
-    print_info "Docker 环境检查通过"
-}
-
-# 获取 docker compose 命令
-get_compose_cmd() {
-    if docker compose version &> /dev/null; then
-        echo "docker compose"
-    else
-        echo "docker-compose"
-    fi
-}
-
-# 显示使用说明
-show_usage() {
-    echo "使用方法:"
-    echo "  ./scripts/deploy.sh [选项]"
-    echo ""
-    echo "选项:"
-    echo "  sqlite      启动 SQLite + ChromaDB 方案（轻量级，无需外部数据库）"
-    echo "  mysql       启动 MySQL + Milvus 方案（先启动基础设施，再启动应用）"
-    echo "  stop        停止所有服务"
-    echo "  restart     重启所有服务"
-    echo "  logs        查看服务日志"
-    echo "  status      查看服务状态"
-    echo "  cleanup     清理所有容器和数据卷"
-    echo "  help        显示帮助信息"
-    echo ""
-    echo "示例:"
-    echo "  ./scripts/deploy.sh sqlite      # 启动 SQLite + ChromaDB 方案"
-    echo "  ./scripts/deploy.sh mysql       # 启动 MySQL + Milvus 方案"
-    echo "  ./scripts/deploy.sh stop        # 停止所有服务"
-}
-
-# 交互式选择方案
-select_scheme() {
-    echo ""
-    echo "请选择部署方案:"
-    echo ""
-    echo "  ${GREEN}1)${NC} SQLite + ChromaDB"
-    echo "     - 轻量级单机部署"
-    echo "     - 适合开发调试"
-    echo "     - 无需外部数据库服务"
-    echo ""
-    echo "  ${GREEN}2)${NC} MySQL + Milvus"
-    echo "     - 高性能生产级部署"
-    echo "     - 适合大规模数据"
-    echo "     - 包含完整的数据库服务"
-    echo ""
-    
-    read -p "请输入选项 [1/2] (默认: 1): " choice
-    
-    case $choice in
-        2)
-            echo "mysql"
-            ;;
-        *)
-            echo "sqlite"
-            ;;
-    esac
-}
-
-# 启动 SQLite + ChromaDB 方案
-start_sqlite() {
-    print_info "正在启动 SQLite + ChromaDB 方案..."
-    
-    COMPOSE_CMD=$(get_compose_cmd)
-    
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" build --no-cache
-    
-    print_info "镜像构建完成，正在启动服务..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" up -d
-    
-    print_success_message "SQLite + ChromaDB"
-}
-
-# 启动 MySQL + Milvus 方案
-start_mysql() {
-    print_info "正在启动 MySQL + Milvus 方案..."
-    
-    COMPOSE_CMD=$(get_compose_cmd)
-    
-    # 检查环境变量文件
-    if [ ! -f "$PROJECT_ROOT/.env.prod" ]; then
-        print_warning "未找到 .env.prod 文件，使用默认配置"
-        create_default_env_prod
+    # 检查 Docker Compose
+    if ! docker compose version >/dev/null 2>&1; then
+        echo -e "${RED}❌ 未找到 Docker Compose${NC}"
+        echo "请安装 Docker Compose v2+"
+        exit 1
     fi
     
-    # 第一步：启动基础设施服务
-    print_info "第一步：启动 MySQL + Milvus 基础设施..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" up -d
-    
-    print_info "等待基础设施就绪 (约 20 秒)..."
-    sleep 20
-    
-    # 检查基础设施状态
-    if ! $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" ps | grep -q "healthy"; then
-        print_warning "部分基础设施可能尚未完全就绪，继续部署应用..."
+    echo -e "${GREEN}✓ Docker 环境正常${NC}"
+    echo ""
+}
+
+# 检查环境变量文件
+check_env_file() {
+    if [ ! -f "$ENV_FILE" ]; then
+        echo -e "${YELLOW}⚠  未找到 .env.production 文件${NC}"
+        
+        if [ -f "$PROJECT_DIR/.env.production.example" ]; then
+            echo -e "${YELLOW}正在从模板创建...${NC}"
+            cp "$PROJECT_DIR/.env.production.example" "$ENV_FILE"
+            echo -e "${GREEN}✓ 已创建 .env.production${NC}"
+            echo -e "${RED}请修改配置后重新运行: $0 up${NC}"
+            echo ""
+            cat "$ENV_FILE"
+            exit 0
+        else
+            echo -e "${RED}❌ 未找到模板文件${NC}"
+            exit 1
+        fi
     fi
     
-    # 第二步：启动应用层服务
-    print_info "第二步：构建并启动应用层服务..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" build --no-cache
+    # 检查必要的环境变量
+    source "$ENV_FILE"
     
-    print_info "镜像构建完成，正在启动应用服务..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" up -d
+    MISSING=""
+    [ -z "$MYSQL_ROOT_PASSWORD" ] && MISSING="$MISSING\n  - MYSQL_ROOT_PASSWORD"
+    [ -z "$MYSQL_PASSWORD" ] && MISSING="$MISSING\n  - MYSQL_PASSWORD"
     
-    print_success_message "MySQL + Milvus"
+    if [ -n "$MISSING" ]; then
+        echo -e "${RED}❌ 以下环境变量未设置:$MISSING${NC}"
+        echo ""
+        echo -e "${YELLOW}请编辑 $ENV_FILE 并设置缺失的变量${NC}"
+        exit 1
+    fi
+    
+    echo -e "${GREEN}✓ 环境变量检查通过${NC}"
+    echo ""
 }
 
-# 创建默认的生产环境配置
-create_default_env_prod() {
-    cat > "$PROJECT_ROOT/.env.prod" << 'EOF'
-# MySQL 配置
-MYSQL_ROOT_PASSWORD=mgagent_root_2024
-MYSQL_DATABASE=mgagent
-MYSQL_USER=mgagent
-MYSQL_PASSWORD=mgagent_password_2024
-MYSQL_PORT=3306
-
-# Milvus 配置
-MILVUS_HOST=milvus
-MILVUS_PORT=19530
-MILVUS_GRPC_PORT=9091
-
-# 服务端口配置
-BACKEND_PORT=8000
-ADMIN_BACKEND_PORT=8001
-FRONTEND_PORT=3000
-ADMIN_FRONTEND_PORT=3001
-EOF
+# 启动服务
+start_services() {
+    echo -e "${YELLOW}========== 启动所有服务 ==========${NC}"
+    echo ""
     
-    print_info "已创建默认配置文件 .env.prod"
-}
-
-# 打印成功信息
-print_success_message() {
-    local env_type=$1
+    # 检查环境
+    check_env
+    check_env_file
+    
+    echo -e "${CYAN}启动 Docker Compose 服务...${NC}"
+    echo ""
+    
+    cd "$PROJECT_DIR"
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" up -d --build
     
     echo ""
-    echo -e "${GREEN}╔══════════════════════════════════════════════════════════════╗${NC}"
-    echo -e "${GREEN}║                    🎉 部署成功！                              ║${NC}"
-    echo -e "${GREEN}╚══════════════════════════════════════════════════════════════╝${NC}"
+    echo -e "${GREEN}✅ 所有服务已启动${NC}"
     echo ""
-    echo -e "  ${BLUE}方案类型:${NC} $env_type"
-    echo -e "  ${BLUE}MGAgent 前端:${NC}    http://localhost:3000"
-    echo -e "  ${BLUE}管理台前端:${NC}      http://localhost:3001"
-    echo -e "  ${BLUE}后端 API:${NC}        http://localhost:8000"
-    echo -e "  ${BLUE}管理台 API:${NC}      http://localhost:8001"
-    echo ""
-    echo -e "${YELLOW}默认管理员账号:${NC}"
-    echo -e "  用户名: admin"
-    echo -e "  密码:   admin123"
-    echo ""
-    echo -e "${GREEN}查看服务状态:${NC} ./scripts/deploy.sh status"
-    echo -e "${GREEN}查看服务日志:${NC} ./scripts/deploy.sh logs"
-    echo -e "${GREEN}停止所有服务:${NC} ./scripts/deploy.sh stop"
-    echo ""
+    
+    show_access_info
+    show_status
 }
 
 # 停止服务
 stop_services() {
-    print_info "正在停止所有服务..."
+    echo -e "${YELLOW}========== 停止所有服务 ==========${NC}"
+    echo ""
     
-    COMPOSE_CMD=$(get_compose_cmd)
+    cd "$PROJECT_DIR"
+    docker compose -f "$COMPOSE_FILE" down
     
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" down 2>/dev/null || true
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" down 2>/dev/null || true
-    
-    print_info "所有服务已停止"
+    echo -e "${GREEN}✅ 所有服务已停止${NC}"
 }
 
 # 重启服务
 restart_services() {
-    print_info "请选择要重启的方案..."
+    echo -e "${YELLOW}========== 重启所有服务 ==========${NC}"
+    echo ""
     
-    scheme=$(select_scheme)
+    cd "$PROJECT_DIR"
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" restart
     
-    stop_services
-    
-    if [ "$scheme" == "sqlite" ]; then
-        start_sqlite
-    else
-        start_mysql
-    fi
-}
-
-# 查看日志
-show_logs() {
-    print_info "请选择要查看日志的方案..."
-    
-    scheme=$(select_scheme)
-    
-    COMPOSE_CMD=$(get_compose_cmd)
-    
-    if [ "$scheme" == "sqlite" ]; then
-        $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" logs -f --tail=100
-    else
-        print_info "基础设施日志:"
-        $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" logs -f --tail=50 &
-        local infra_pid=$!
-        print_info "应用层日志:"
-        $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" logs -f --tail=50
-        kill $infra_pid 2>/dev/null || true
-    fi
+    echo -e "${GREEN}✅ 所有服务已重启${NC}"
+    show_status
 }
 
 # 查看状态
 show_status() {
-    echo ""
-    echo -e "${BLUE}SQLite + ChromaDB 方案状态:${NC}"
-    echo ""
-    
-    COMPOSE_CMD=$(get_compose_cmd)
-    
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" ps 2>/dev/null || echo "  未运行"
-    
-    echo ""
-    echo -e "${BLUE}MySQL + Milvus 基础设施状态:${NC}"
+    echo -e "${YELLOW}========== 服务状态 ==========${NC}"
     echo ""
     
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" ps 2>/dev/null || echo "  未运行"
+    cd "$PROJECT_DIR"
+    docker compose -f "$COMPOSE_FILE" ps
     
     echo ""
-    echo -e "${BLUE}MySQL + Milvus 应用层状态:${NC}"
-    echo ""
-    
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" ps 2>/dev/null || echo "  未运行"
+    show_access_info
 }
 
-# 清理所有数据
-cleanup_all() {
-    echo ""
-    print_warning "⚠️  此操作将删除所有容器和数据卷，不可恢复！"
-    echo ""
-    read -p "确认清理？(输入 yes 确认): " confirm
+# 显示访问信息
+show_access_info() {
+    source "$ENV_FILE" 2>/dev/null || true
     
-    if [ "$confirm" != "yes" ]; then
-        print_info "已取消清理操作"
+    CHAT_PORT="${CHAT_FRONTEND_PORT:-3000}"
+    ADMIN_PORT="${ADMIN_FRONTEND_PORT:-3001}"
+    ATTU_PORT="${ATTU_PORT:-8003}"
+    
+    SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+    
+    echo -e "${CYAN}访问地址:${NC}"
+    echo "  Chat 前端:   http://$SERVER_IP:$CHAT_PORT"
+    echo "  Admin 前端:  http://$SERVER_IP:$ADMIN_PORT"
+    echo "  Chat API:    http://$SERVER_IP:${CHAT_BACKEND_PORT:-8000}/docs"
+    echo "  Admin API:   http://$SERVER_IP:${ADMIN_BACKEND_PORT:-8001}/docs"
+    echo "  Attu UI:     http://$SERVER_IP:$ATTU_PORT"
+    echo ""
+}
+
+# 查看日志
+show_logs() {
+    echo -e "${YELLOW}========== 服务日志 ==========${NC}"
+    echo ""
+    
+    cd "$PROJECT_DIR"
+    
+    local SERVICE="${1:-all}"
+    
+    if [ "$SERVICE" = "all" ]; then
+        docker compose -f "$COMPOSE_FILE" logs --tail=100 -f
+    else
+        docker compose -f "$COMPOSE_FILE" logs "$SERVICE" --tail=100 -f
+    fi
+}
+
+# 构建镜像
+build_images() {
+    echo -e "${YELLOW}========== 重新构建镜像 ==========${NC}"
+    echo ""
+    
+    cd "$PROJECT_DIR"
+    docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" build --no-cache
+    
+    echo -e "${GREEN}✅ 镜像构建完成${NC}"
+}
+
+# 清理
+cleanup() {
+    echo -e "${RED}⚠  警告: 此操作将删除所有容器和数据卷！${NC}"
+    echo ""
+    echo "这将删除:"
+    echo "  - 所有 MGAgent 相关容器"
+    echo "  - 所有数据卷（包括数据库、向量库数据）"
+    echo ""
+    echo -e "${RED}此操作不可恢复！${NC}"
+    echo ""
+    
+    read -p "确认清理？输入 YES 继续: " CONFIRM
+    
+    if [ "$CONFIRM" != "YES" ]; then
+        echo "已取消"
         exit 0
     fi
     
-    COMPOSE_CMD=$(get_compose_cmd)
+    cd "$PROJECT_DIR"
     
-    print_info "正在清理 SQLite + ChromaDB 方案..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.local.yml" down -v 2>/dev/null || true
+    echo -e "${YELLOW}正在停止并移除所有服务...${NC}"
+    docker compose -f "$COMPOSE_FILE" down -v
     
-    print_info "正在清理 MySQL + Milvus 应用层..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.mysql-app.yml" down -v 2>/dev/null || true
+    echo -e "${YELLOW}正在清理镜像...${NC}"
+    docker compose -f "$COMPOSE_FILE" down --rmi all
     
-    print_info "正在清理 MySQL + Milvus 基础设施..."
-    $COMPOSE_CMD -f "$PROJECT_ROOT/docker-compose.infra.yml" down -v 2>/dev/null || true
-    
-    print_info "正在清理未使用的 Docker 资源..."
-    docker system prune -f 2>/dev/null || true
-    
-    print_info "清理完成"
+    echo -e "${GREEN}✅ 清理完成${NC}"
 }
 
-# 主函数
-main() {
-    print_banner
-    
-    # 检查 Docker 环境
-    check_docker
-    
-    # 获取命令行参数
-    action=${1:-""}
-    
-    case $action in
-        sqlite)
-            start_sqlite
-            ;;
-        mysql)
-            start_mysql
-            ;;
-        stop)
-            stop_services
-            ;;
-        restart)
-            restart_services
-            ;;
-        logs)
-            show_logs
-            ;;
-        status)
-            show_status
-            ;;
-        cleanup)
-            cleanup_all
-            ;;
-        help|--help|-h)
-            show_usage
-            ;;
-        *)
-            if [ -z "$action" ]; then
-                # 交互式选择
-                scheme=$(select_scheme)
-                
-                if [ "$scheme" == "sqlite" ]; then
-                    start_sqlite
-                else
-                    start_mysql
-                fi
-            else
-                print_error "未知选项: $action"
-                show_usage
-                exit 1
-            fi
-            ;;
-    esac
-}
-
-# 执行主函数
-main "$@"
+# 主逻辑
+case "${1:-help}" in
+    up)
+        start_services
+        ;;
+    down)
+        stop_services
+        ;;
+    restart)
+        restart_services
+        ;;
+    status)
+        show_status
+        ;;
+    logs)
+        show_logs "${2:-all}"
+        ;;
+    build)
+        build_images
+        ;;
+    cleanup)
+        cleanup
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        echo -e "${RED}错误: 未知命令 '$1'${NC}"
+        echo ""
+        show_help
+        exit 1
+esac

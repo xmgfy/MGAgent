@@ -13,7 +13,7 @@ MySQL + Milvus 方案采用 **分层部署** 架构，将基础设施和应用�
 | 层级 | Compose 文件 | 包含服务 |
 |------|-------------|---------|
 | 基础设施 | `docker-compose.infra.yml` | MySQL、Milvus、etcd、MinIO、Attu |
-| 应用层 | `docker-compose.mysql-app.yml` | Chat 后端、Admin 后端、Chat 前端、Admin 前端 |
+| 应用层 | `docker-compose.prod.yml` | Chat 后端、Admin 后端、Chat 前端、Admin 前端 |
 
 :::info 为什么分层
 分层部署的好处是：
@@ -95,7 +95,7 @@ curl http://localhost:19530/healthz
 ./scripts/deploy.sh mysql
 
 # 方式二：手动启动
-docker compose -f docker-compose.mysql-app.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### 应用层服务列表
@@ -109,18 +109,23 @@ docker compose -f docker-compose.mysql-app.yml up -d --build
 
 ### 环境变量配置
 
-应用层通过环境变量连接基础设施：
+应用层通过 `.env.mysql` 文件连接基础设施：
 
 ```yaml
-environment:
-  - DATABASE_SCHEME=mysql
-  - MYSQL_HOST=mysql          # Docker 内部服务名
-  - MYSQL_PORT=3306
-  - MYSQL_USER=mgagent
-  - MYSQL_PASSWORD=${MYSQL_PASSWORD}
-  - MYSQL_DATABASE=mgagent
-  - MILVUS_HOST=milvus        # Docker 内部服务名
-  - MILVUS_PORT=19530
+env_file:
+  - .env.mysql
+```
+
+`.env.mysql` 中配置以下连接信息：
+
+```
+MYSQL_HOST=mysql          # Docker 内部服务名
+MYSQL_PORT=3306
+MYSQL_USER=mgagent
+MYSQL_PASSWORD=${MYSQL_PASSWORD}
+MYSQL_DATABASE=mgagent
+MILVUS_HOST=milvus        # Docker 内部服务名
+MILVUS_PORT=19530
 ```
 
 :::warning 重要
@@ -160,10 +165,10 @@ environment:
 
 ## 环境变量文件
 
-创建 `.env.prod` 文件自定义配置：
+创建 `.env.mysql` 文件自定义配置：
 
 ```bash
-cat > .env.prod << 'EOF'
+cat > .env.mysql << 'EOF'
 # MySQL 配置
 MYSQL_ROOT_PASSWORD=your_root_password
 MYSQL_DATABASE=mgagent

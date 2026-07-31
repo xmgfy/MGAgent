@@ -95,8 +95,8 @@ flowchart TB
 | 向量数据库 | ChromaDB 0.5+（轻量嵌入式） | Milvus 2.4（分布式，亿级向量） |
 | 适用场景 | 本地开发调试、单机部署 | 生产环境、大规模数据、高并发 |
 | 外部依赖 | 无 | MySQL、Milvus、etcd、MinIO |
-| 环境变量 | `DATABASE_SCHEME=sqlite` | `DATABASE_SCHEME=mysql` |
-| Compose 文件 | `docker-compose.local.yml` | `docker-compose.infra.yml` + `docker-compose.mysql-app.yml` |
+| 环境变量 | `.env.sqlite` | `.env.mysql` |
+| Compose 文件 | 无需 Docker | `docker-compose.infra.yml` |
 
 > 两套方案下，Chat 后端和 Admin 后端连接的是**同一套数据库和向量数据库**，确保数据一致性。
 
@@ -140,7 +140,7 @@ flowchart TB
 
 ## 快速开始
 
-### 方式一：本地开发（SQLite 方案）
+### 方式一：本地开发（SQLite 方案，推荐）
 
 ```bash
 # 1. 克隆项目
@@ -150,43 +150,46 @@ cd MGAgent
 # 2. 一键初始化环境
 ./scripts/init.sh
 
-# 3. 启动所有服务
-./scripts/start-all.sh
+# 3. 启动所有服务（SQLite 模式）
+./scripts/start-all.sh sqlite
 
 # 4. 访问应用
-#   Chat 前端:  http://localhost:3000
-#   Admin 前端: http://localhost:3001
+#   Chat 前端:  http://localhost:5173
+#   Admin 前端: http://localhost:5174
 #   Chat API:   http://localhost:8000/docs
 #   Admin API:  http://localhost:8001/docs
 ```
 
-### 方式二：Docker 部署（SQLite 方案）
+### 方式二：本地开发（MySQL 方案）
 
 ```bash
-# 使用部署脚本
-./scripts/deploy.sh sqlite
-```
+# 1. 克隆项目
+git clone https://github.com/xmgfy/MGAgent.git
+cd MGAgent
 
-### 方式三：Docker 部署（MySQL 方案）
+# 2. 一键初始化环境
+./scripts/init.sh
 
-```bash
-# 1. 启动基础设施（MySQL + Milvus + etcd + MinIO）
+# 3. 启动 Docker 基础设施（MySQL + Milvus）
 ./scripts/docker-services.sh start
 
-# 2. 启动应用层
-./scripts/deploy.sh mysql
+# 4. 启动所有服务（MySQL 模式）
+./scripts/start-all.sh mysql
+
+# 5. 访问应用
+#   Chat 前端:  http://localhost:5173
+#   Admin 前端: http://localhost:5174
 ```
 
 ## 脚本说明
 
 | 脚本 | 用途 |
 |------|------|
-| `scripts/init.sh` | 项目初始化，创建环境变量配置、安装依赖 |
-| `scripts/start-all.sh` | 启动所有本地服务（后端 + 前端） |
-| `scripts/stop-all.sh` | 停止所有本地服务 |
+| `scripts/init.sh` | 项目初始化，安装依赖、创建目录、设置权限 |
+| `scripts/start-all.sh` | 启动所有服务，支持 `sqlite` / `mysql` 模式 |
+| `scripts/stop-all.sh` | 停止所有服务 |
 | `scripts/status.sh` | 查看所有服务运行状态 |
-| `scripts/deploy.sh` | Docker 部署脚本，支持 `sqlite` / `mysql` 参数 |
-| `scripts/docker-services.sh` | Docker 基础设施服务管理（start/stop/status） |
+| `scripts/docker-services.sh` | Docker 基础设施服务管理（MySQL + Milvus） |
 
 > 详细的脚本使用说明请参考 [脚本使用文档](https://xmgfy.github.io/MGAgent/docs/development/scripts)
 
@@ -198,31 +201,26 @@ MGAgent/
 │   ├── app/
 │   │   ├── api/                  # API 路由模块
 │   │   ├── core/                 # 核心配置与工厂模式
+│   │   ├── exceptions/           # 自定义异常体系
 │   │   ├── models/               # 数据模型
+│   │   ├── schemas/              # Pydantic 请求/响应模型
 │   │   ├── services/             # 业务逻辑层
 │   │   └── agent/                # LangChain Agent 与工具
-│   ├── Dockerfile
+│   ├── .env.sqlite               # SQLite 模式配置
+│   ├── .env.mysql                # MySQL 模式配置
 │   └── requirements.txt
 ├── mgagent-admin-backend/        # Admin 后端服务 (FastAPI :8001)
 │   ├── app/
-│   ├── Dockerfile
+│   ├── .env.sqlite               # SQLite 模式配置
+│   ├── .env.mysql                # MySQL 模式配置
 │   └── requirements.txt
-├── mgagent-frontend/             # Chat 前端 (React :3000)
-│   ├── src/
-│   ├── Dockerfile
-│   └── package.json
-├── mgagent-admin-frontend/       # Admin 前端 (React :3001)
-│   ├── src/
-│   ├── Dockerfile
-│   └── package.json
-├── docker-compose.local.yml      # SQLite 方案 Compose 配置
-├── docker-compose.infra.yml      # MySQL 方案基础设施层
-├── docker-compose.mysql-app.yml  # MySQL 方案应用层
-├── scripts/                      # 工具与部署脚本
+├── mgagent-frontend/             # Chat 前端 (React :5173)
+│   └── src/
+├── mgagent-admin-frontend/       # Admin 前端 (React :5174)
+│   └── src/
+├── docker-compose.infra.yml      # MySQL + Milvus 基础设施
+├── scripts/                      # 工具脚本
 ├── website/                      # Docusaurus 在线文档站点
-│   ├── docs/                     # 文档源文件
-│   ├── blog/                     # 更新日志
-│   └── docusaurus.config.js
 ├── docs/                         # 项目文档
 └── README.md
 ```
@@ -246,14 +244,12 @@ MGAgent/
 
 ## 环境变量
 
-核心环境变量（通过 `scripts/init.sh` 自动生成 `.env` 文件）：
+不同模式使用不同的环境配置文件：
 
-| 变量 | 默认值 | 说明 |
-|------|--------|------|
-| `DATABASE_SCHEME` | `sqlite` | 数据库方案：`sqlite` 或 `mysql` |
-| `OPENAI_API_BASE` | - | LLM API 地址（从数据库配置读取） |
-| `CHAT_BACKEND_PORT` | `8000` | Chat 后端端口 |
-| `ADMIN_BACKEND_PORT` | `8001` | Admin 后端端口 |
+- **SQLite 模式**：`.env.sqlite`
+- **MySQL 模式**：`.env.mysql`
+
+`start-all.sh` 会根据启动模式自动复制对应的配置文件为 `.env`。
 
 > 大模型相关配置已**全部迁移至数据库**，通过 Admin 端管理，不再使用本地静态配置。
 

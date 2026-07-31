@@ -1,7 +1,7 @@
 #!/bin/bash
 # MGAgent Docker 基础设施服务管理脚本
 # 仅管理 MySQL + Milvus 基础设施服务
-# 应用层服务请使用 ./scripts/deploy.sh 管理
+# 应用层服务请使用 ./scripts/start-all.sh 管理
 
 set -e
 
@@ -45,6 +45,10 @@ BUILD_IMAGES=(
 
 show_help() {
     echo -e "${BLUE}MGAgent 基础设施服务管理${NC}"
+    echo ""
+    echo "该脚本用于管理 MySQL + Milvus 基础设施服务，仅在 MySQL 模式下需要。"
+    echo "SQLite 模式无需启动任何基础设施服务。"
+    echo ""
     echo "用法: $0 <命令>"
     echo ""
     echo "命令列表:"
@@ -58,7 +62,12 @@ show_help() {
     echo "  check-mirror 检查当前镜像源配置"
     echo "  help         显示帮助信息"
     echo ""
-    echo -e "${YELLOW}💡 应用层服务 (后端 + 前端) 请使用 ./scripts/deploy.sh 管理${NC}"
+    echo -e "${CYAN}使用场景:${NC}"
+    echo "  1. MySQL 模式本地调试: 先运行此脚本启动基础设施，再运行 start-all.sh mysql"
+    echo "  2. 或直接运行 start-all.sh mysql，它会自动调用此脚本"
+    echo ""
+    echo -e "${YELLOW}💡 应用层服务 (后端 + 前端) 请使用 ./scripts/start-all.sh 管理${NC}"
+    echo -e "${YELLOW}💡 切换到 SQLite 模式: ./scripts/start-all.sh sqlite (无需基础设施)${NC}"
 }
 
 # 配置 Docker 国内镜像源
@@ -323,7 +332,7 @@ start_services() {
     docker compose -f "$COMPOSE_FILE" ps
     
     echo -e "${GREEN}✅ 基础设施服务已启动${NC}"
-    echo -e "${YELLOW}💡 应用层服务请使用 ./scripts/deploy.sh mysql 启动${NC}"
+    echo -e "${YELLOW}💡 应用层服务请使用 ./scripts/start-all.sh mysql 启动${NC}"
     echo ""
     echo -e "📊 访问地址:"
     echo -e "   MySQL:      mysql -h localhost -P 3306 -u mgagent -p"

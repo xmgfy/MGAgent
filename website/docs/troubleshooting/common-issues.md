@@ -61,7 +61,7 @@ cat mgagent-admin-frontend/admin-frontend.log | tail -50
 ```bash
 # 单独启动 Chat 后端
 cd mgagent-backend
-export DATABASE_SCHEME=sqlite
+source .env.sqlite
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # 查看是否有导入错误或配置错误
@@ -71,7 +71,7 @@ python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 ```bash
 # 查看容器状态
-docker compose -f docker-compose.local.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 # 查看崩溃日志
 docker logs mgagent-backend --tail=100
@@ -175,7 +175,7 @@ docker logs mgagent-milvus --tail=50
 docker network inspect mgagent-network
 
 # 确保所有服务在同一网络
-docker compose -f docker-compose.local.yml ps
+docker compose -f docker-compose.prod.yml ps
 
 # MySQL 方案：检查外部网络
 docker network ls | grep mgagent
@@ -226,7 +226,7 @@ tail -f mgagent-backend/backend.log
 # 4. 查看后端日志获取详细错误
 
 # 启用调试模式查看详细 SQL
-# .env 文件设置 DEBUG=True
+# .env.sqlite 或 .env.mysql 文件设置 DEBUG=True
 ```
 
 ## 性能问题
@@ -347,7 +347,7 @@ tail -f mgagent-backend/backend.log
 grep -i "error\|exception\|traceback" mgagent-backend/backend.log
 
 # Docker 日志
-docker compose -f docker-compose.local.yml logs --tail=100
+docker compose -f docker-compose.prod.yml logs --tail=100
 ```
 
 ### 常见错误日志

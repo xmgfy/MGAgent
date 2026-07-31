@@ -97,13 +97,14 @@ docker compose -f docker-compose.infra.yml up -d
 
 **解决：**
 
-```bash
-# 修改环境变量
-export DATABASE_SCHEME=mysql   # 切换到 MySQL 方案
-export DATABASE_SCHEME=sqlite  # 切换到 SQLite 方案
+通过切换 `.env` 文件来选择数据库方案：
 
-# 或在 .env 文件中配置
-echo "DATABASE_SCHEME=mysql" >> .env
+```bash
+# 切换到 MySQL 方案
+cp .env.mysql .env
+
+# 切换到 SQLite 方案
+cp .env.sqlite .env
 
 # 重启服务生效
 ```

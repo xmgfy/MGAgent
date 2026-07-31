@@ -33,7 +33,7 @@ slug: /deployment/production-deployment
 
 # 或手动分层部署
 ./scripts/docker-services.sh start
-docker compose -f docker-compose.mysql-app.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 ```
 
 ### 为什么选择 MySQL + Milvus
@@ -52,7 +52,7 @@ docker compose -f docker-compose.mysql-app.yml up -d --build
 
 ```bash
 # 创建生产环境配置
-cat > .env.prod << 'EOF'
+cat > .env.mysql << 'EOF'
 # MySQL 配置
 MYSQL_ROOT_PASSWORD=strong_root_password_2024
 MYSQL_DATABASE=mgagent
@@ -247,13 +247,13 @@ docker exec mgagent-mysql mysqladmin ping -h localhost
 
 ```bash
 # 查看所有服务日志
-docker compose -f docker-compose.mysql-app.yml logs --tail=100
+docker compose -f docker-compose.prod.yml logs --tail=100
 
 # 基础设施日志
 docker compose -f docker-compose.infra.yml logs --tail=100
 
 # 实时监控
-docker compose -f docker-compose.mysql-app.yml logs -f
+docker compose -f docker-compose.prod.yml logs -f
 ```
 
 :::tip 日志轮转
@@ -294,7 +294,7 @@ git pull origin main
 
 ```bash
 # 应用层可以独立更新，不影响基础设施
-docker compose -f docker-compose.mysql-app.yml up -d --build
+docker compose -f docker-compose.prod.yml up -d --build
 
 # 基础设施更新需要停机
 docker compose -f docker-compose.infra.yml down

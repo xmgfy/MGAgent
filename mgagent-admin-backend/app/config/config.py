@@ -18,6 +18,12 @@ class DatabaseScheme(str, Enum):
 class Settings(BaseSettings):
     """统一配置"""
     
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",  # 忽略环境文件中未定义的变量
+    }
+    
     # ========== 基础配置 ==========
     DATABASE_SCHEME: str = os.getenv("DATABASE_SCHEME", "sqlite")
     
@@ -45,10 +51,6 @@ class Settings(BaseSettings):
     
     # ========== 公共配置 ==========
     DOCUMENT_DIR: str = "../mgagent-backend/data/documents"
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 settings = Settings()
 
