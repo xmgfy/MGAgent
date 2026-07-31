@@ -1,8 +1,15 @@
-from fastapi import FastAPI
+"""
+应用入口 - 注册路由和中间件
+"""
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+
 from app.api.routes import router
 from app.db.database import init_db
 from app.config.config import settings, get_scheme_info, get_database_scheme
+from app.exceptions import BusinessException
+from app.core.logger import logger
 import uvicorn
 
 # 初始化数据库
@@ -21,6 +28,31 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 注册全局异常处理器
+@app.exception_handler(BusinessException)
+async def business_exception_handler(request: Request, exc: BusinessException):
+    """业务异常处理器"""
+    logger.warning(f"业务异常: {exc.message}, path: {request.url.path}")
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "code": exc.code,
+            "message": exc.message,
+        }
+    )
+
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """全局异常处理器"""
+    logger.error(f"未处理异常: {str(exc)}, path: {request.url.path}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "code": "INTERNAL_ERROR",
+            "message": "服务器内部错误，请稍后重试",
+        }
+    )
 
 app.include_router(router, prefix="/api")
 

@@ -19,6 +19,12 @@ class DatabaseScheme(str, Enum):
 class Settings(BaseSettings):
     """统一配置"""
     
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",  # 忽略环境文件中未定义的变量
+    }
+    
     # ========== 基础配置 ==========
     DATABASE_SCHEME: str = os.getenv("DATABASE_SCHEME", "sqlite")  # sqlite 或 mysql
     
@@ -47,10 +53,6 @@ class Settings(BaseSettings):
     
     # ========== 公共配置 ==========
     DOCUMENT_DIR: str = "data/documents"
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 settings = Settings()
 
@@ -156,5 +158,5 @@ def _get_file_size(path: Path) -> int:
         if path.exists():
             return path.stat().st_size
         return 0
-    except:
+    except OSError:
         return 0

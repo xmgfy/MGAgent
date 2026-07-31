@@ -2,6 +2,12 @@ from pydantic_settings import BaseSettings
 from pathlib import Path
 
 class Settings(BaseSettings):
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "extra": "ignore",  # 忽略环境文件中未定义的变量
+    }
+    
     CHROMA_PERSIST_DIR: str = "data/chroma"
     DOCUMENT_DIR: str = "data/documents"
     
@@ -19,10 +25,6 @@ class Settings(BaseSettings):
     ADMIN_API_URL: str = "http://localhost:8001/admin/api"
     
     DEBUG: bool = True
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
 
 settings = Settings()
 

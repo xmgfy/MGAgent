@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Loader2, CheckCircle, UserIcon, LogOut } from 'lucide-react'
 import Sidebar from './components/Sidebar'
@@ -6,252 +6,43 @@ import ChatHeader from './components/ChatHeader'
 import ChatHistory from './components/ChatHistory'
 import ChatInput from './components/ChatInput'
 import AuthModal from './components/AuthModal'
-import {
-  chatApi,
-  sessionApi,
-  authApi,
-  clearAuthToken,
-  type Session,
-  type Message,
-  type User,
-} from './api/client'
+import { useChat } from './hooks/useChat'
 
 function App() {
-  const [sessions, setSessions] = useState<Session[]>([])
-  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null)
-  const [messages, setMessages] = useState<Message[]>([])
-  const [isTyping, setIsTyping] = useState(false)
+  const {
+    sessions,
+    currentSessionId,
+    messages,
+    isTyping,
+    user,
+    chatCountWarning,
+    sendMessage,
+    sendMessageWithFile,
+    selectSession,
+    createSession,
+    deleteSession,
+    logout,
+    loginSuccess,
+  } = useChat()
+
+  const [showAuthModal, setShowAuthModal] = useState(false)
   const [uploadingFile, setUploadingFile] = useState<string | null>(null)
   const [uploadSuccess, setUploadSuccess] = useState(false)
-  const [user, setUser] = useState<User | null>(null)
-  const [showAuthModal, setShowAuthModal] = useState(false)
-  const [chatCountWarning, setChatCountWarning] = useState(false)
 
-  const loadSessions = useCallback(async () => {
-    try {
-      const data = await sessionApi.getSessions()
-      setSessions(data)
-    } catch (error) {
-      console.error('Failed to load sessions:', error)
-    }
-  }, [])
-
-  const loadSessionMessages = useCallback(async (sessionId: string) => {
-    try {
-      const session = await sessionApi.getSession(sessionId)
-      setMessages(session.messages || [])
-    } catch (error) {
-      console.error('Failed to load session messages:', error)
-    }
-  }, [])
-
-  const loadCurrentUser = useCallback(async () => {
-    try {
-      const currentUser = await authApi.getCurrentUser()
-      setUser(currentUser)
-    } catch (error) {
-      console.error('Failed to load current user:', error)
-    }
-  }, [])
-
-  useEffect(() => {
-    loadSessions()
-    loadCurrentUser()
-  }, [loadSessions, loadCurrentUser])
-
-  useEffect(() => {
-    if (currentSessionId) {
-      loadSessionMessages(currentSessionId)
-    } else {
-      setMessages([])
-    }
-  }, [currentSessionId, loadSessionMessages])
-
-  const handleSendMessage = async (message: string) => {
-    if (!user && sessions.length >= 3) {
-      setChatCountWarning(true)
-      setTimeout(() => setChatCountWarning(false), 5000)
-      return
-    }
-
-    setIsTyping(true)
-    
-    const tempUserId = `temp-${Date.now()}`
-    const newUserMessage: Message = {
-      id: tempUserId,
-      role: 'user',
-      content: message,
-      created_at: new Date().toISOString(),
-    }
-    
-    setMessages(prev => [...prev, newUserMessage])
-    
-    try {
-      const response = await chatApi.sendMessage({
-        message,
-        session_id: currentSessionId || undefined,
-      })
-      
-      setCurrentSessionId(response.session_id)
-      
-      await loadSessions()
-      await loadSessionMessages(response.session_id)
-      await loadCurrentUser()
-    } catch (error: any) {
-      if (error.response?.status === 403) {
-        setChatCountWarning(true)
-        setTimeout(() => setChatCountWarning(false), 5000)
-      } else if (error.response?.status === 503) {
-        const errorDetail = error.response.data.detail
-        const sessionId = typeof errorDetail === 'object' && errorDetail.session_id ? errorDetail.session_id : null
-        
-        if (sessionId) {
-          setCurrentSessionId(sessionId)
-        }
-        
-        const errorContent = typeof errorDetail === 'object' 
-          ? errorDetail.message 
-          : '系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试。'
-        
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: errorContent,
-          created_at: new Date().toISOString(),
-        }
-        setMessages(prev => prev.filter(m => m.id !== tempUserId))
-        setMessages(prev => [...prev, errorMessage])
-      } else {
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: `请求失败: ${error.response?.data?.detail || '未知错误'}。请稍后重试。`,
-          created_at: new Date().toISOString(),
-        }
-        setMessages(prev => prev.filter(m => m.id !== tempUserId))
-        setMessages(prev => [...prev, errorMessage])
-      }
-      console.error('Failed to send message:', error)
-    } finally {
-      setIsTyping(false)
-    }
-  }
-
-  const handleSendMessageWithFile = async (message: string, file: File) => {
-    if (!user && sessions.length >= 3) {
-      setChatCountWarning(true)
-      setTimeout(() => setChatCountWarning(false), 5000)
-      return
-    }
-
-    setIsTyping(true)
+  const handleUpload = async (message: string, file: File) => {
     setUploadingFile(file.name)
-    
-    const tempUserId = `temp-${Date.now()}`
-    const newUserMessage: Message = {
-      id: tempUserId,
-      role: 'user',
-      content: message || `[上传文件: ${file.name}]`,
-      created_at: new Date().toISOString(),
-    }
-    
-    setMessages(prev => [...prev, newUserMessage])
-    
     try {
-      const response = await chatApi.sendMessageWithFile(
-        message,
-        currentSessionId || undefined,
-        file
-      )
-      
-      setCurrentSessionId(response.session_id)
+      await sendMessageWithFile(message, file)
       setUploadSuccess(true)
       setTimeout(() => setUploadSuccess(false), 3000)
-      
-      await loadSessions()
-      await loadSessionMessages(response.session_id)
-      await loadCurrentUser()
-    } catch (error: any) {
-      if (error.response?.status === 403) {
-        setChatCountWarning(true)
-        setTimeout(() => setChatCountWarning(false), 5000)
-      } else if (error.response?.status === 503) {
-        const errorDetail = error.response.data.detail
-        const sessionId = typeof errorDetail === 'object' && errorDetail.session_id ? errorDetail.session_id : null
-        
-        if (sessionId) {
-          setCurrentSessionId(sessionId)
-        }
-        
-        const errorContent = typeof errorDetail === 'object' 
-          ? errorDetail.message 
-          : '系统尚未配置AI模型，请联系管理员在管理端配置并启用模型后重试。'
-        
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: errorContent,
-          created_at: new Date().toISOString(),
-        }
-        setMessages(prev => prev.filter(m => m.id !== tempUserId))
-        setMessages(prev => [...prev, errorMessage])
-      } else {
-        const errorMessage: Message = {
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: `请求失败: ${error.response?.data?.detail || '未知错误'}。请稍后重试。`,
-          created_at: new Date().toISOString(),
-        }
-        setMessages(prev => prev.filter(m => m.id !== tempUserId))
-        setMessages(prev => [...prev, errorMessage])
-      }
-      console.error('Failed to send message with file:', error)
     } finally {
-      setIsTyping(false)
       setUploadingFile(null)
     }
   }
 
-  const handleSelectSession = (sessionId: string) => {
-    setCurrentSessionId(sessionId)
-  }
-
-  const handleCreateSession = () => {
-    setCurrentSessionId(null)
-    setMessages([])
-  }
-
-  const handleDeleteSession = async (sessionId: string) => {
-    if (!confirm('确定要删除这个对话吗？')) return
-    
-    try {
-      await sessionApi.deleteSession(sessionId)
-      await loadSessions()
-      if (currentSessionId === sessionId) {
-        setCurrentSessionId(null)
-        setMessages([])
-      }
-    } catch (error) {
-      console.error('Failed to delete session:', error)
-    }
-  }
-
   const handleClearChat = () => {
-    if (!confirm('确定要清空当前对话吗？')) return
-    handleCreateSession()
-  }
-
-  const handleLoginSuccess = (loggedInUser: User) => {
-    setUser(loggedInUser)
-    loadSessions()
-  }
-
-  const handleLogout = () => {
-    clearAuthToken()
-    setUser(null)
-    setCurrentSessionId(null)
-    setMessages([])
-    loadSessions()
+    if (!window.confirm('确定要清空当前对话吗？')) return
+    createSession()
   }
 
   const currentSession = sessions.find((s) => s.id === currentSessionId)
@@ -261,21 +52,21 @@ function App() {
       <Sidebar
         sessions={sessions}
         currentSessionId={currentSessionId}
-        onSelectSession={handleSelectSession}
-        onCreateSession={handleCreateSession}
-        onDeleteSession={handleDeleteSession}
+        onSelectSession={selectSession}
+        onCreateSession={createSession}
+        onDeleteSession={deleteSession}
       />
 
       <div className="flex-1 flex flex-col h-full">
         <ChatHeader title={currentSession?.title || '新对话'} onClear={handleClearChat} />
-        
+
         <div className="flex-1 bg-gray-50 overflow-hidden">
           <ChatHistory messages={messages} isTyping={isTyping} />
         </div>
-        
+
         <ChatInput
-          onSend={handleSendMessage}
-          onUpload={handleSendMessageWithFile}
+          onSend={sendMessage}
+          onUpload={handleUpload}
           isLoading={isTyping || !!uploadingFile}
         />
       </div>
@@ -324,7 +115,7 @@ function App() {
       >
         {user ? (
           <motion.button
-            onClick={handleLogout}
+            onClick={logout}
             className="flex items-center gap-2 px-4 py-2.5 bg-white rounded-xl shadow-lg border border-gray-100 hover:bg-gray-50 transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -361,7 +152,7 @@ function App() {
       <AuthModal
         isOpen={showAuthModal}
         onClose={() => setShowAuthModal(false)}
-        onLoginSuccess={handleLoginSuccess}
+        onLoginSuccess={loginSuccess}
       />
     </div>
   )

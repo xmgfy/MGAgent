@@ -80,3 +80,6 @@ scripts/deploy-docs.sh
 
 # 截图目录（如果不需要上传截图）
 # docs/images/
+
+#.trae
+.trae/

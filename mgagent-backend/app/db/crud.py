@@ -1,9 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import desc
 from app.db.models import ChatSession, ChatMessage, Document, User, AnonymousStats
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import bcrypt
+from typing import Optional
 
 def create_chat_session(db: Session, user_id: str, title: str = "新对话") -> ChatSession:
     session_id = str(uuid.uuid4())
@@ -50,7 +51,7 @@ def add_message(db: Session, session_id: str, role: str, content: str) -> ChatMe
         content=content
     )
     db.add(message)
-    db_session.updated_at = datetime.utcnow()
+    db_session.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(message)
     return message
@@ -174,7 +175,7 @@ def increment_anonymous_chat_count(db: Session) -> int:
     """增加匿名用户的聊天次数并返回新的计数"""
     stats = get_anonymous_stats(db)
     stats.chat_count += 1
-    stats.last_used_at = datetime.utcnow()
+    stats.last_used_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(stats)
     return stats.chat_count

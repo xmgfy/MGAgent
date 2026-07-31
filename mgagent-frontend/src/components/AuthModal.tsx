@@ -1,7 +1,13 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, User as UserIcon, Mail, Lock, Eye, EyeOff, LogIn, UserPlus } from 'lucide-react'
+import { AxiosError } from 'axios'
 import { authApi, setAuthToken, type User } from '../api/client'
+
+interface ErrorResponse {
+  detail?: string
+  message?: string
+}
 
 interface AuthModalProps {
   isOpen: boolean
@@ -32,8 +38,9 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }: AuthModalProps) => {
       setAuthToken(result.access_token)
       onLoginSuccess(result.user)
       onClose()
-    } catch (err: any) {
-      setError(err.response?.data?.detail || '登录失败')
+    } catch (err: unknown) {
+      const axiosError = err as AxiosError<ErrorResponse>
+      setError(axiosError.response?.data?.detail || '登录失败')
     } finally {
       setLoading(false)
     }
@@ -63,8 +70,9 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }: AuthModalProps) => {
       setEmail('')
       setPassword('')
       setConfirmPassword('')
-    } catch (err: any) {
-      setError(err.response?.data?.detail || '注册失败')
+    } catch (err: unknown) {
+      const axiosError = err as AxiosError<ErrorResponse>
+      setError(axiosError.response?.data?.detail || '注册失败')
     } finally {
       setLoading(false)
     }
