@@ -5,7 +5,7 @@ class Settings(BaseSettings):
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
-        "extra": "ignore",  # 忽略环境文件中未定义的变量
+        "extra": "ignore",
     }
     
     CHROMA_PERSIST_DIR: str = "data/chroma"
@@ -18,6 +18,13 @@ class Settings(BaseSettings):
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION: str = "mgagent_knowledge"
+    
+    # MinIO 对象存储配置（MySQL 模式使用）
+    MINIO_HOST: str = "localhost"
+    MINIO_PORT: int = 9000
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "mgagent-documents"
     
     API_HOST: str = "0.0.0.0"
     API_PORT: int = 8000

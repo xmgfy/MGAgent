@@ -134,3 +134,21 @@ class AnonymousStats(Base):
     last_used_at = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+
+class SecurityRule(Base):
+    """安全规则表 - 敏感词过滤配置"""
+    __tablename__ = "security_rules"
+    
+    id = Column(String(64), primary_key=True, index=True)
+    tenant_id = Column(String(64), ForeignKey("tenants.id"), nullable=True, index=True)
+    rule_type = Column(String(20), nullable=False)  # 'keyword', 'pattern', 'regex'
+    content = Column(Text, nullable=False)  # 规则内容：关键词、模式或正则表达式
+    action = Column(String(20), nullable=False, default='mask')  # 'block', 'mask', 'log'
+    priority = Column(Integer, default=0)  # 优先级，数字越大优先级越高
+    is_active = Column(Boolean, default=True)
+    description = Column(String(500), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+    
+    tenant = relationship("Tenant")

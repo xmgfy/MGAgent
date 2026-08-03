@@ -1,4 +1,5 @@
 from sqlalchemy.orm import Session
+from sqlalchemy import or_
 from app.db.models import SystemNotification
 from datetime import datetime
 import uuid
@@ -24,7 +25,13 @@ def get_notification_by_id(db: Session, notification_id: str) -> SystemNotificat
 def get_notifications(db: Session, admin_id: str = None, is_read: bool = None) -> list[SystemNotification]:
     query = db.query(SystemNotification)
     if admin_id:
-        query = query.filter(SystemNotification.admin_id == admin_id)
+        # 返回全局通知（admin_id为None）和当前管理员的通知
+        query = query.filter(
+            or_(
+                SystemNotification.admin_id == admin_id,
+                SystemNotification.admin_id.is_(None)
+            )
+        )
     if is_read is not None:
         query = query.filter(SystemNotification.is_read == is_read)
     return query.order_by(SystemNotification.created_at.desc()).all()
@@ -48,5 +55,11 @@ def delete_notification(db: Session, notification_id: str) -> bool:
 def get_unread_count(db: Session, admin_id: str = None) -> int:
     query = db.query(SystemNotification).filter(SystemNotification.is_read == False)
     if admin_id:
-        query = query.filter(SystemNotification.admin_id == admin_id)
+        # 返回全局通知（admin_id为None）和当前管理员的未读通知
+        query = query.filter(
+            or_(
+                SystemNotification.admin_id == admin_id,
+                SystemNotification.admin_id.is_(None)
+            )
+        )
     return query.count()

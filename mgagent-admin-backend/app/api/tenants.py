@@ -24,7 +24,7 @@ class TenantUpdateRequest(BaseModel):
 class TenantResponse(BaseModel):
     id: str
     name: str
-    description: str
+    description: str | None = None
     status: str
     max_users: int
     admin_count: int

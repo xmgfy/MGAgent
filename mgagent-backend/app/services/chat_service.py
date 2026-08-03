@@ -2,6 +2,7 @@
 聊天服务层
 """
 import asyncio
+import os
 import uuid
 from typing import Optional
 
@@ -30,13 +31,12 @@ from app.exceptions import (
     ChatLimitExceededException,
 )
 from app.agent.core import enterprise_agent, get_llm
-from app.config.config import get_document_dir
+from app.storage import get_storage
 from app.rag.loader import DocumentLoader
 
 ANONYMOUS_USER_ID = "anonymous"
 ANONYMOUS_MAX_CHATS = 3
 DEFAULT_TIMEOUT = 30.0
-DOCUMENT_DIR = get_document_dir()
 
 
 class ChatService:
@@ -224,16 +224,32 @@ class ChatService:
                 )
 
             try:
+                storage = get_storage()
                 loader = DocumentLoader()
-                temp_file_path = f"{DOCUMENT_DIR}/temp_{uuid.uuid4()}{file_ext}"
-                with open(temp_file_path, "wb") as f:
-                    f.write(file_data)
-
-                docs = loader.load_file(temp_file_path)
-                file_content = "\n\n".join([doc.page_content for doc in docs])
-
-                import os
-                os.remove(temp_file_path)
+                
+                # 上传到存储并获取临时路径
+                stored_path = storage.upload(filename, file_data)
+                
+                # 如果是 MinIO 存储，需要下载到本地临时文件
+                if hasattr(storage, 'download') and not os.path.exists(stored_path):
+                    # MinIO 存储场景：下载到本地临时文件
+                    temp_file_path = f"{os.getcwd()}/data/documents/{uuid.uuid4()}{file_ext}"
+                    file_content = storage.download(stored_path)
+                    with open(temp_file_path, "wb") as f:
+                        f.write(file_content)
+                    docs = loader.load_file(temp_file_path)
+                    file_content_text = "\n\n".join([doc.page_content for doc in docs])
+                    # 清理临时文件
+                    if os.path.exists(temp_file_path):
+                        os.remove(temp_file_path)
+                else:
+                    # 本地存储场景：直接使用路径
+                    docs = loader.load_file(stored_path)
+                    file_content_text = "\n\n".join([doc.page_content for doc in docs])
+                    # 清理存储的临时文件
+                    storage.delete(stored_path)
+                
+                file_content = file_content_text
             except OSError as e:
                 logger.error(f"文件处理失败: {str(e)}")
                 raise BusinessException(f"文件处理失败: {str(e)}")

@@ -22,7 +22,7 @@ class UserResponse(BaseModel):
     email: str
     role: str
     status: str
-    tenant_id: str
+    tenant_id: Optional[str] = None
     chat_count: int
     max_chats: int
     created_at: str

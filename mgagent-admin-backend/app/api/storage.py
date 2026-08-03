@@ -1,18 +1,27 @@
 from fastapi import APIRouter, HTTPException, Depends
 from pydantic import BaseModel
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
-import sqlite3
-from app.db.database import get_db
+from app.db.database import get_db, init_engine
 from app.db.models import Admin
+from app.config.config import is_sqlite_scheme, get_sqlite_path, get_database_url
 from .auth import get_current_admin
 
 router = APIRouter()
+
+def get_ensure_engine():
+    """确保数据库引擎已初始化"""
+    from app.db.database import engine
+    if engine is None:
+        return init_engine()
+    return engine
 
 class StorageDBStats(BaseModel):
     database_path: str
     tables: List[str]
     total_records: Dict[str, int]
+    database_type: str
 
 class ColumnInfo(BaseModel):
     name: str
@@ -30,25 +39,27 @@ class QueryRequest(BaseModel):
 @router.get("/storage-db/stats", response_model=StorageDBStats)
 async def get_storage_db_stats(admin: Admin = Depends(get_current_admin)):
     try:
-        from app.db.database import DB_PATH
+        eng = get_ensure_engine()
+        with eng.connect() as conn:
+            inspector = inspect(eng)
+            tables = inspector.get_table_names()
+            
+            total_records = {}
+            for table in tables:
+                try:
+                    result = conn.execute(text(f"SELECT COUNT(*) FROM `{table}`"))
+                    total_records[table] = result.scalar()
+                except Exception:
+                    total_records[table] = 0
         
-        conn = sqlite3.connect(str(DB_PATH))
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [row[0] for row in cursor.fetchall()]
-        
-        total_records = {}
-        for table in tables:
-            cursor.execute(f"SELECT COUNT(*) FROM {table}")
-            total_records[table] = cursor.fetchone()[0]
-        
-        conn.close()
+        db_type = "sqlite" if is_sqlite_scheme() else "mysql"
+        db_path = str(get_sqlite_path()) if is_sqlite_scheme() else get_database_url()
         
         return StorageDBStats(
-            database_path=str(DB_PATH),
+            database_path=db_path,
             tables=tables,
-            total_records=total_records
+            total_records=total_records,
+            database_type=db_type
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -56,37 +67,36 @@ async def get_storage_db_stats(admin: Admin = Depends(get_current_admin)):
 @router.get("/storage-db/tables", response_model=List[TableInfo])
 async def list_tables(admin: Admin = Depends(get_current_admin)):
     try:
-        from app.db.database import DB_PATH
-        
-        conn = sqlite3.connect(str(DB_PATH))
-        cursor = conn.cursor()
-        
-        cursor.execute("SELECT name FROM sqlite_master WHERE type='table'")
-        tables = [row[0] for row in cursor.fetchall()]
+        eng = get_ensure_engine()
+        inspector = inspect(eng)
+        tables = inspector.get_table_names()
         
         table_info_list = []
         for table in tables:
-            cursor.execute(f"PRAGMA table_info({table})")
-            columns = cursor.fetchall()
+            columns = inspector.get_columns(table)
+            pk_cols = inspector.get_pk_constraint(table)
+            pk_columns = pk_cols['constrained_columns'] if pk_cols else []
             
-            cursor.execute(f"SELECT COUNT(*) FROM {table}")
-            record_count = cursor.fetchone()[0]
+            try:
+                with eng.connect() as conn:
+                    result = conn.execute(text(f"SELECT COUNT(*) FROM `{table}`"))
+                    record_count = result.scalar()
+            except Exception:
+                record_count = 0
             
             column_list = []
             for col in columns:
-                column_list.append({
-                    "name": col[1],
-                    "type": col[2],
-                    "is_pk": bool(col[5])
-                })
+                column_list.append(ColumnInfo(
+                    name=col['name'],
+                    type=str(col['type']),
+                    is_pk=col['name'] in pk_columns
+                ))
             
             table_info_list.append(TableInfo(
                 name=table,
                 columns=column_list,
                 record_count=record_count
             ))
-        
-        conn.close()
         
         return table_info_list
     except Exception as e:
@@ -100,27 +110,24 @@ async def get_table_data(
     admin: Admin = Depends(get_current_admin)
 ):
     try:
-        from app.db.database import DB_PATH
-        
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute(f"SELECT name FROM sqlite_master WHERE type='table' AND name=?", (table_name,))
-        if not cursor.fetchone():
+        eng = get_ensure_engine()
+        inspector = inspect(eng)
+        tables = inspector.get_table_names()
+        if table_name not in tables:
             raise HTTPException(status_code=404, detail="表不存在")
         
-        cursor.execute(f"SELECT * FROM {table_name} LIMIT ? OFFSET ?", (limit, offset))
-        rows = cursor.fetchall()
+        with eng.connect() as conn:
+            result = conn.execute(text(f"SELECT * FROM `{table_name}` LIMIT :limit OFFSET :offset"), {"limit": limit, "offset": offset})
+            columns = list(result.keys())
+            rows = result.fetchall()
         
-        columns = [desc[0] for desc in cursor.description]
         data = []
         for row in rows:
-            data.append(dict(zip(columns, row)))
-        
-        conn.close()
+            data.append(dict(zip(columns, [str(v) if v is not None else None for v in row])))
         
         return {"columns": columns, "data": data}
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -129,30 +136,29 @@ async def execute_query(
     request: QueryRequest,
     admin: Admin = Depends(get_current_admin)
 ):
+    conn = None
     try:
-        from app.db.database import DB_PATH
+        eng = get_ensure_engine()
+        query = request.query.strip()
+        conn = eng.connect()
+        result = conn.execute(text(query))
         
-        conn = sqlite3.connect(str(DB_PATH))
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
-        
-        cursor.execute(request.query)
-        
-        if request.query.strip().lower().startswith('select'):
-            rows = cursor.fetchall()
-            columns = [desc[0] for desc in cursor.description]
+        if query.lower().startswith('select'):
+            columns = list(result.keys())
+            rows = result.fetchall()
             
             data = []
             for row in rows:
-                data.append(dict(zip(columns, row)))
+                data.append(dict(zip(columns, [str(v) if v is not None else None for v in row])))
             
-            result = {"columns": columns, "data": data}
+            conn.close()
+            return {"columns": columns, "data": data}
         else:
             conn.commit()
-            result = {"message": f"执行成功，影响 {cursor.rowcount} 行"}
-        
-        conn.close()
-        
-        return result
+            conn.close()
+            return {"message": f"执行成功，影响 {result.rowcount} 行"}
     except Exception as e:
+        if conn:
+            conn.rollback()
+            conn.close()
         raise HTTPException(status_code=500, detail=str(e))

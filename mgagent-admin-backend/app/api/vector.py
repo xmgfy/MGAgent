@@ -37,16 +37,19 @@ async def get_vector_db_stats(admin: Admin = Depends(get_current_admin)):
         vector_db = get_vector_db()
         total_chunks = vector_db.get_total_count()
         
-        # 获取嵌入模型信息
-        embeddings = get_embeddings_model()
-        embedding_model_name = type(embeddings).__name__
+        # 获取嵌入模型信息（可能未配置）
+        try:
+            embeddings = get_embeddings_model()
+            embedding_model_name = type(embeddings).__name__
+        except Exception:
+            embedding_model_name = "未配置"
         
         if is_mysql_scheme():
             return VectorDBStats(
                 total_chunks=total_chunks,
                 vector_db_type="milvus",
                 host=settings.MILVUS_HOST,
-                port=settings.MILVUS_PORT,
+                port=str(settings.MILVUS_PORT),
                 collection_name=settings.MILVUS_COLLECTION,
                 embedding_model=embedding_model_name
             )
@@ -60,7 +63,25 @@ async def get_vector_db_stats(admin: Admin = Depends(get_current_admin)):
                 embedding_model=embedding_model_name
             )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # 向量数据库连接失败时返回基础信息
+        if is_mysql_scheme():
+            return VectorDBStats(
+                total_chunks=0,
+                vector_db_type="milvus",
+                host=settings.MILVUS_HOST,
+                port=str(settings.MILVUS_PORT),
+                collection_name=settings.MILVUS_COLLECTION,
+                embedding_model="未连接"
+            )
+        else:
+            from app.config.config import get_chroma_dir
+            return VectorDBStats(
+                total_chunks=0,
+                vector_db_type="chromadb",
+                persist_directory=str(get_chroma_dir()),
+                collection_name="mgagent_knowledge",
+                embedding_model="未连接"
+            )
 
 
 @router.get("/vector-db/chunks", response_model=List[VectorChunk])

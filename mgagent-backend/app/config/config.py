@@ -1,7 +1,7 @@
 """
 统一配置模块 - 支持双技术栈方案
 方案1: SQLite + ChromaDB
-方案2: MySQL + Milvus
+方案2: MySQL + Milvus + MinIO
 
 注意：大模型相关配置（API Key、Base URL、模型名称等）统一从数据库中读取，不再使用本地静态配置。
 """
@@ -14,7 +14,7 @@ import secrets
 class DatabaseScheme(str, Enum):
     """数据库方案枚举"""
     SQLITE = "sqlite"      # 方案1: SQLite + ChromaDB
-    MYSQL = "mysql"        # 方案2: MySQL + Milvus
+    MYSQL = "mysql"        # 方案2: MySQL + Milvus + MinIO
 
 class Settings(BaseSettings):
     """统一配置"""
@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     model_config = {
         "env_file": ".env",
         "env_file_encoding": "utf-8",
-        "extra": "ignore",  # 忽略环境文件中未定义的变量
+        "extra": "ignore",
     }
     
     # ========== 基础配置 ==========
@@ -40,7 +40,7 @@ class Settings(BaseSettings):
     SQLITE_DB_PATH: str = "data/chat.db"
     CHROMA_PERSIST_DIR: str = "data/chroma"
     
-    # ========== 方案2: MySQL + Milvus 配置 ==========
+    # ========== 方案2: MySQL + Milvus + MinIO 配置 ==========
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
     MYSQL_USER: str = "mgagent"
@@ -50,6 +50,13 @@ class Settings(BaseSettings):
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION: str = "mgagent_knowledge"
+    
+    # MinIO 对象存储配置
+    MINIO_HOST: str = "localhost"
+    MINIO_PORT: int = 9000
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "mgagent-documents"
     
     # ========== 公共配置 ==========
     DOCUMENT_DIR: str = "data/documents"
@@ -97,6 +104,16 @@ def get_document_dir() -> Path:
     """获取文档目录"""
     return DOCUMENT_DIR
 
+def get_minio_config() -> dict:
+    """获取 MinIO 配置"""
+    return {
+        "host": settings.MINIO_HOST,
+        "port": settings.MINIO_PORT,
+        "access_key": settings.MINIO_ACCESS_KEY,
+        "secret_key": settings.MINIO_SECRET_KEY,
+        "bucket": settings.MINIO_BUCKET,
+    }
+
 # ========== 初始化目录 ==========
 CHROMA_DIR = get_chroma_dir()
 SQLITE_PATH = get_sqlite_path()
@@ -127,12 +144,16 @@ def get_scheme_info() -> dict:
                 "version": "0.5+",
                 "path": str(CHROMA_DIR),
                 "collection": "default"
+            },
+            "file_storage": {
+                "type": "local",
+                "path": str(DOCUMENT_DIR)
             }
         }
     else:
         return {
             "scheme": "mysql",
-            "name": "MySQL + Milvus",
+            "name": "MySQL + Milvus + MinIO",
             "description": "高性能生产级部署，适合大规模数据",
             "database": {
                 "type": "mysql",
@@ -149,6 +170,13 @@ def get_scheme_info() -> dict:
                 "host": settings.MILVUS_HOST,
                 "port": settings.MILVUS_PORT,
                 "collection": settings.MILVUS_COLLECTION
+            },
+            "file_storage": {
+                "type": "minio",
+                "name": "MinIO",
+                "host": settings.MINIO_HOST,
+                "port": settings.MINIO_PORT,
+                "bucket": settings.MINIO_BUCKET
             }
         }
 

@@ -2,7 +2,6 @@
 文档服务层
 """
 import os
-import uuid
 
 from sqlalchemy.orm import Session
 
@@ -15,7 +14,7 @@ from app.db.crud import (
 )
 from app.db.models import Document
 from app.core.logger import logger
-from app.config.config import get_document_dir
+from app.storage import get_storage
 from app.rag.loader import DocumentLoader
 from app.rag.retriever import get_vector_retriever
 from app.exceptions import (
@@ -24,7 +23,6 @@ from app.exceptions import (
     BusinessException,
 )
 
-DOCUMENT_DIR = get_document_dir()
 ALLOWED_EXTENSIONS = [".pdf", ".txt", ".docx", ".md"]
 
 
@@ -41,19 +39,35 @@ class DocumentService:
                 f"不支持的文件格式，支持的格式: {', '.join(ALLOWED_EXTENSIONS)}"
             )
 
-        file_id = str(uuid.uuid4())
-        file_path = os.path.join(DOCUMENT_DIR, f"{file_id}{file_ext}")
+        storage = get_storage()
+        stored_path = storage.upload(filename, file_data)
+        file_size = len(file_data)
 
-        with open(file_path, "wb") as f:
-            f.write(file_data)
-
-        document = create_document(db, filename, file_ext, os.path.getsize(file_path))
-        logger.info(f"文档上传成功: {filename}, id: {document.id}")
+        document = create_document(db, filename, file_ext, file_size)
+        logger.info(f"文档上传成功: {filename}, id: {document.id}, path: {stored_path}")
 
         # 尝试索引
         try:
             loader = DocumentLoader()
-            docs = loader.load_file(file_path)
+            
+            # 对于本地存储，直接使用文件路径
+            # 对于 MinIO 存储，需要先下载到临时文件
+            if hasattr(storage, 'download'):
+                try:
+                    file_content = storage.download(stored_path)
+                    temp_path = storage.get_temp_path(filename)
+                    with open(temp_path, "wb") as f:
+                        f.write(file_content)
+                    docs = loader.load_file(temp_path)
+                    # 清理临时文件
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
+                except Exception:
+                    # 如果下载失败，尝试直接使用路径（本地存储场景）
+                    docs = loader.load_file(stored_path)
+            else:
+                docs = loader.load_file(stored_path)
+            
             get_vector_retriever().add_documents(docs)
             update_document_status(db, document.id, "indexed")
             logger.info(f"文档索引成功: {document.id}")
@@ -81,9 +95,15 @@ class DocumentService:
     @staticmethod
     def delete_document(db: Session, document_id: str) -> None:
         """删除文档"""
-        if not delete_document_crud(db, document_id):
+        document = get_document(db, document_id)
+        if not document:
             raise NotFoundException("文档不存在")
-        logger.info(f"文档已删除: {document_id}")
+        
+        # 删除关联的存储文件
+        if delete_document_crud(db, document_id):
+            logger.info(f"文档已删除: {document_id}")
+        else:
+            raise NotFoundException("文档不存在")
 
 
 def _to_document_response(document: Document) -> dict:

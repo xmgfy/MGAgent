@@ -77,14 +77,16 @@ CREATE TABLE IF NOT EXISTS model_configs (
 
 -- 创建系统通知表
 CREATE TABLE IF NOT EXISTS system_notifications (
-    id VARCHAR(36) PRIMARY KEY,
-    type VARCHAR(50) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    message TEXT,
+    id VARCHAR(64) PRIMARY KEY,
+    type VARCHAR(20) NOT NULL,
+    title VARCHAR(200) NOT NULL,
+    message TEXT NOT NULL,
+    admin_id VARCHAR(64) NULL,
     is_read BOOLEAN DEFAULT FALSE,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_type (type),
-    INDEX idx_is_read (is_read)
+    INDEX idx_is_read (is_read),
+    INDEX idx_admin_id (admin_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建聊天会话表
@@ -109,26 +111,30 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 
 -- 创建文档表
 CREATE TABLE IF NOT EXISTS documents (
-    id VARCHAR(36) PRIMARY KEY,
-    filename VARCHAR(255) NOT NULL,
-    file_type VARCHAR(50),
+    id VARCHAR(64) PRIMARY KEY,
+    filename VARCHAR(200) NOT NULL,
+    file_type VARCHAR(20),
     file_size INT,
-    status VARCHAR(50) DEFAULT 'uploaded',
+    status VARCHAR(20) DEFAULT 'uploaded',
+    tenant_id VARCHAR(64) NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_filename (filename),
-    INDEX idx_status (status)
+    INDEX idx_status (status),
+    INDEX idx_tenant_id (tenant_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建匿名统计表
 CREATE TABLE IF NOT EXISTS anonymous_stats (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    date DATE NOT NULL,
-    count INT DEFAULT 0,
-    UNIQUE KEY idx_date (date)
+    chat_count INT DEFAULT 0,
+    max_chats INT DEFAULT 3,
+    last_used_at DATETIME NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 插入默认平台管理员 (用户名: admin, 密码: admin123)
 -- 注意: 实际密码需要通过 bcrypt 加密
 INSERT INTO admins (id, username, email, hashed_password, role, status)
-VALUES ('admin-001', 'admin', 'admin@mgagent.com', '$2b$12$LJ3m4ys3MqKJ3XQmHX2F4Ob6vG6k5Lxq8E9i6v3N5oQjPf7KbFzWy', 'platform_admin', 'active')
+VALUES ('admin-001', 'admin', 'admin@mgagent.com', '$2b$12$W6FwW7.KOa8tP6QF5i1J4OR840qEpaHpAYRPJl.5CkmfPlAJzHORC', 'platform_admin', 'active')
 ON DUPLICATE KEY UPDATE username=username;
