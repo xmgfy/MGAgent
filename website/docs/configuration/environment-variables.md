@@ -15,11 +15,10 @@ MGAgent 使用环境变量来控制服务行为。所有配置通过 Pydantic Ba
 ### .env 文件
 
 ```bash
-# 复制模板
-cp .env.example .env
+# 生产环境配置
+cp .env.production.example .env.production
 
-# 编辑配置
-vim .env
+# 或本地开发（自动加载 .env.sqlite / .env.mysql）
 ```
 
 ### 环境变量文件加载顺序

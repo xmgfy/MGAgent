@@ -28,12 +28,13 @@ slug: /deployment/production-deployment
 生产环境推荐使用 MySQL + Milvus 方案：
 
 ```bash
-# 使用部署脚本
-./scripts/deploy.sh mysql
+# 使用部署脚本（推荐）
+cp .env.production.example .env.production  # 首次配置
+./scripts/deploy.sh up
 
-# 或手动分层部署
-./scripts/docker-services.sh start
-docker compose -f docker-compose.prod.yml up -d --build
+# 或手动分步部署
+./scripts/docker-services.sh start          # 启动基础设施
+docker compose -f docker-compose.prod.yml up -d --build  # 启动应用层
 ```
 
 ### 为什么选择 MySQL + Milvus
@@ -281,10 +282,10 @@ cd /opt/MGAgent
 git pull origin main
 
 # 2. 备份数据
-./scripts/deploy.sh stop
+./scripts/deploy.sh down
 
 # 3. 重新构建并启动
-./scripts/deploy.sh mysql
+./scripts/deploy.sh up
 
 # 4. 验证服务
 ./scripts/deploy.sh status

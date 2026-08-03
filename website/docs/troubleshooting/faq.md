@@ -242,10 +242,10 @@ cd /path/to/MGAgent
 git pull origin main
 
 # 2. 停止当前服务
-./scripts/deploy.sh stop
+./scripts/deploy.sh down
 
 # 3. 重新部署
-./scripts/deploy.sh sqlite   # 或 mysql
+./scripts/deploy.sh up
 
 # 4. 检查状态
 ./scripts/deploy.sh status

@@ -41,7 +41,8 @@ MGAgent/
 │   │   ├── chroma/               # ChromaDB 数据
 │   │   └── documents/            # 上传的文档
 │   ├── Dockerfile                # Docker 构建文件
-│   ├── .env.example              # 环境变量模板
+│   ├── .env.sqlite               # SQLite 环境配置
+│   ├── .env.mysql                # MySQL 环境配置
 │   └── requirements.txt          # Python 依赖
 │
 ├── mgagent-admin-backend/        # Admin 后端服务
@@ -119,7 +120,8 @@ MGAgent/
 │
 ├── docker-compose.prod.yml       # 生产环境全栈配置
 ├── docker-compose.infra.yml      # MySQL + Milvus 基础设施
-├── .env.example                  # 环境变量模板
+├── .env.production.example      # 生产环境配置模板
+├── .env.docker                  # Docker 基础设施配置
 └── README.md
 ```
 

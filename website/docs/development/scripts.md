@@ -15,11 +15,11 @@ MGAgent 在 `scripts/` 目录下提供了一系列工具脚本，用于简化部
 | 脚本 | 用途 | 适用场景 |
 |------|------|---------|
 | `init.sh` | 一键初始化项目 | 首次安装 |
-| `start-all.sh` | 启动本地开发服务 | 本地开发 |
+| `start-all.sh` | 启动本地开发服务 | 本地开发（sqlite/mysql） |
 | `stop-all.sh` | 停止本地开发服务 | 本地开发 |
 | `status.sh` | 检查服务状态 | 运维监控 |
 | `deploy.sh` | 一键生产部署 | 生产环境部署 |
-| `docker-services.sh` | 基础设施服务管理 | MySQL 方案 |
+| `docker-services.sh` | 基础设施服务管理 | MySQL 模式本地调试 |
 
 ## init.sh - 项目初始化
 
@@ -42,7 +42,7 @@ chmod +x scripts/init.sh
 3. 安装 `mgagent-frontend` Node.js 依赖
 4. 安装 `mgagent-admin-frontend` Node.js 依赖
 5. 创建必要的数据目录
-6. 设置脚本执行权限
+6. 设置所有脚本执行权限
 
 ### 输出示例
 
@@ -51,12 +51,11 @@ chmod +x scripts/init.sh
   MGAgent 初始化脚本
 =========================================
 
-[1/4] 安装 mgagent-backend 依赖
+[1/6] 安装 mgagent-backend 依赖
 -----------------------------------------
 正在安装 Python 依赖...
 Python 依赖安装完成
 
-[2/4] 安装 mgagent-admin-backend 依赖
 ...
 
 =========================================
@@ -64,20 +63,27 @@ Python 依赖安装完成
 =========================================
 
 使用说明:
-  启动所有服务: ./scripts/start-all.sh
-  停止所有服务: ./scripts/stop-all.sh
-  检查服务状态: ./scripts/status.sh
+  启动服务 (SQLite): ./scripts/start-all.sh sqlite
+  启动服务 (MySQL):  ./scripts/start-all.sh mysql
+  停止服务:          ./scripts/stop-all.sh
+  检查服务状态:      ./scripts/status.sh
 ```
 
 ## start-all.sh - 启动本地服务
 
-一键启动所有本地开发服务（4 个进程）。
+一键启动所有本地开发服务（4 个进程），支持 SQLite 和 MySQL 两种模式。
 
 ### 使用方法
 
 ```bash
 chmod +x scripts/start-all.sh
-./scripts/start-all.sh
+
+# SQLite 模式（默认，无需 Docker）
+./scripts/start-all.sh sqlite
+
+# MySQL 模式（需先启动 Docker 基础设施）
+./scripts/docker-services.sh start
+./scripts/start-all.sh mysql
 ```
 
 ### 启动的服务
@@ -210,78 +216,101 @@ mgagent-backend:
 
 ## deploy.sh - 生产部署
 
-一键 Docker 生产部署脚本，支持 SQLite 和 MySQL 两种数据库方案，自动完成环境检查、镜像构建和服务启动。
+一键 Docker 生产部署脚本，使用 `docker-compose.prod.yml` 编排所有服务（基础设施 + 应用层）。
 
 ### 使用方法
 
 ```bash
-# 交互式选择
-./scripts/deploy.sh
+# 添加执行权限
+chmod +x scripts/deploy.sh
 
-# SQLite 方案
-./scripts/deploy.sh sqlite
+# 首次部署前，复制配置模板
+cp .env.production.example .env.production
+# 修改生产环境配置（密码、端口等）
+vim .env.production
 
-# MySQL 方案
-./scripts/deploy.sh mysql
+# 启动所有服务（自动构建镜像）
+./scripts/deploy.sh up
 
 # 停止所有服务
-./scripts/deploy.sh stop
+./scripts/deploy.sh down
 
-# 查看状态
+# 重启所有服务
+./scripts/deploy.sh restart
+
+# 查看服务状态
 ./scripts/deploy.sh status
 
 # 查看日志
-./scripts/deploy.sh logs
+./scripts/deploy.sh logs            # 所有服务
+./scripts/deploy.sh logs backend    # 指定服务
 
-# 清理所有数据
+# 重新构建镜像（不使用缓存）
+./scripts/deploy.sh build
+
+# 清理所有容器和数据卷（谨慎使用）
 ./scripts/deploy.sh cleanup
 ```
 
-### MySQL 方案部署流程
+### 部署流程
 
 ```mermaid
 flowchart LR
-    A[deploy.sh mysql] --> B{检查环境}
-    B --> C[启动基础设施]
-    C --> D[等待就绪 20s]
-    D --> E[构建应用镜像]
-    E --> F[启动应用层]
-    F --> G[部署完成]
+    A[deploy.sh up] --> B{检查环境}
+    B --> C{检查 .env.production}
+    C --> D[Docker Compose 构建镜像]
+    D --> E[启动 MySQL/Milvus]
+    E --> F[启动应用层服务]
+    F --> G[健康检查验证]
+    G --> H[部署完成]
 ```
+
+### 管理的服务
+
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| mgagent-frontend | 3000 | Chat 前端（Nginx） |
+| mgagent-admin-frontend | 3001 | Admin 前端（Nginx） |
+| mgagent-backend | 8000 | Chat API |
+| mgagent-admin-backend | 8001 | Admin API |
+| MySQL | 3306 | 关系数据库 |
+| Milvus | 19530 | 向量数据库 |
+| Attu | 8003 | Milvus 管理界面 |
 
 ### 特点
 
 - 彩色输出，清晰易懂
-- 支持交互式选择方案
-- MySQL 方案自动分层部署（基础设施 + 应用层）
-- 自动创建默认配置文件（`.env.sqlite` / `.env.mysql`）
-- 健康检查验证
-- 支持 SQLite 和 MySQL 双方案一键切换
+- 自动检查 Docker 环境和配置文件
+- 健康检查验证每个服务
+- 支持数据卷持久化
+- 一键清理所有资源（需确认）
 
 ### 输出示例
 
 ```
-╔══════════════════════════════════════════════════════════════╗
-║                    MGAgent 一键部署脚本                      ║
-╚══════════════════════════════════════════════════════════════╝
+=========================================
+  MGAgent 生产环境部署
+=========================================
 
-[INFO] Docker 环境检查通过
-[INFO] 正在启动 MySQL + Milvus 方案...
-[INFO] 第一步：启动 MySQL + Milvus 基础设施...
-[INFO] 等待基础设施就绪 (约 20 秒)...
-[INFO] 第二步：构建并启动应用层服务...
+[1/5] 检查环境...
+✓ Docker 环境正常
+✓ 环境变量检查通过
 
-╔══════════════════════════════════════════════════════════════╗
-║                    🎉 部署成功！                              ║
-╚══════════════════════════════════════════════════════════════╝
+[2/5] 启动 Docker Compose 服务...
+[3/5] 等待服务就绪...
+[4/5] 健康检查验证...
+[5/5] 显示访问信息...
 
-  方案类型: MySQL + Milvus
-  MGAgent 前端:    http://localhost:3000
-  管理台前端:      http://localhost:3001
-  后端 API:        http://localhost:8000
-  管理台 API:      http://localhost:8001
+=========================================
+  所有服务已启动
+=========================================
 
-  默认管理员账号: admin / admin123
+访问地址:
+  Chat 前端:   http://localhost:3000
+  Admin 前端:  http://localhost:3001
+  Chat API:    http://localhost:8000/docs
+  Admin API:   http://localhost:8001/docs
+  Attu UI:     http://localhost:8003
 ```
 
 ## docker-services.sh - 基础设施管理
@@ -347,22 +376,23 @@ flowchart LR
 # 首次使用
 ./scripts/init.sh
 
-# 本地开发（SQLite 方案）
-./scripts/start-all.sh       # 启动
-./scripts/status.sh          # 检查
-./scripts/stop-all.sh        # 停止
+# 本地开发（SQLite 模式，无需 Docker）
+./scripts/start-all.sh sqlite       # 启动
+./scripts/status.sh                 # 检查
+./scripts/stop-all.sh               # 停止
 
-# 生产部署（SQLite 方案）
-./scripts/deploy.sh sqlite
+# 本地开发（MySQL 模式，需 Docker）
+./scripts/docker-services.sh start  # 启动基础设施
+./scripts/start-all.sh mysql        # 启动应用
+./scripts/docker-services.sh stop   # 停止基础设施
 
-# 生产部署（MySQL 方案）
-./scripts/docker-services.sh start    # 先启动基础设施
-./scripts/deploy.sh mysql             # 再启动应用
-
-# 运维
-./scripts/deploy.sh status            # 查看状态
-./scripts/deploy.sh logs              # 查看日志
-./scripts/deploy.sh stop              # 停止所有
+# 生产环境部署
+cp .env.production.example .env.production  # 首次配置
+./scripts/deploy.sh up              # 启动所有服务
+./scripts/deploy.sh down            # 停止所有服务
+./scripts/deploy.sh status          # 查看状态
+./scripts/deploy.sh logs            # 查看日志
+./scripts/deploy.sh restart         # 重启
 ```
 
 ## 注意事项

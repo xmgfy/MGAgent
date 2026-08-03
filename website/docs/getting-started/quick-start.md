@@ -12,30 +12,32 @@ slug: /getting-started/quick-start
 
 ## 方式一：Docker 一键部署（推荐）
 
-### 1. 运行部署脚本
+### 1. 配置并运行部署脚本
 
 ```bash
+# 复制配置模板（首次部署）
+cp .env.production.example .env.production
+
 # 添加执行权限
 chmod +x scripts/deploy.sh
 
-# 交互式选择方案
-./scripts/deploy.sh
+# 一键启动所有服务
+./scripts/deploy.sh up
 ```
 
-### 2. 选择部署方案
+### 2. 服务列表
 
-脚本提供两种技术栈方案：
+生产环境统一使用 MySQL + Milvus 方案（`docker-compose.prod.yml` 已包含所有服务）：
 
-| 选项 | 方案 | 适用场景 |
-|------|------|---------|
-| 1 | SQLite + ChromaDB | 轻量级单机部署，开发调试 |
-| 2 | MySQL + Milvus | 高性能生产部署，大规模数据 |
-
-```bash
-# 或直接指定方案
-./scripts/deploy.sh sqlite    # SQLite + ChromaDB
-./scripts/deploy.sh mysql     # MySQL + Milvus
-```
+| 服务 | 端口 | 说明 |
+|------|------|------|
+| mgagent-frontend | 3000 | Chat 前端（Nginx） |
+| mgagent-admin-frontend | 3001 | Admin 前端（Nginx） |
+| mgagent-backend | 8000 | Chat API |
+| mgagent-admin-backend | 8001 | Admin API |
+| MySQL | 3306 | 关系数据库 |
+| Milvus | 19530 | 向量数据库 |
+| Attu | 8003 | Milvus 管理界面 |
 
 ### 3. 访问系统
 
@@ -43,34 +45,26 @@ chmod +x scripts/deploy.sh
 |------|------|------|
 | Chat 前端 | http://localhost:3000 | 智能对话助手 |
 | Admin 前端 | http://localhost:3001 | 管理后台 |
-| Chat API | http://localhost:8000 | 后端 API |
-| Admin API | http://localhost:8001 | 管理 API |
-
-**MySQL + Milvus 方案额外服务：**
-
-| 服务 | 地址 | 说明 |
-|------|------|------|
-| Attu | http://localhost:8003 | Milvus 向量库管理界面 |
-| MySQL | localhost:3306 | 关系数据库 |
-| Milvus | localhost:19530 | 向量数据库 |
+| Chat API | http://localhost:8000/docs | 后端 API 文档 |
+| Admin API | http://localhost:8001/docs | 管理 API 文档 |
+| Attu | http://localhost:8003 | Milvus 管理界面 |
 
 ### 4. 部署脚本命令速查
 
 ```bash
-./scripts/deploy.sh sqlite      # 启动 SQLite 方案
-./scripts/deploy.sh mysql       # 启动 MySQL 方案
-./scripts/deploy.sh stop        # 停止所有服务
-./scripts/deploy.sh restart     # 重启服务
-./scripts/deploy.sh status      # 查看状态
-./scripts/deploy.sh logs        # 查看日志
-./scripts/deploy.sh cleanup     # 清理所有数据
+./scripts/deploy.sh up           # 启动所有服务
+./scripts/deploy.sh down         # 停止所有服务
+./scripts/deploy.sh restart      # 重启服务
+./scripts/deploy.sh status       # 查看状态
+./scripts/deploy.sh logs         # 查看日志
+./scripts/deploy.sh build        # 重新构建镜像
+./scripts/deploy.sh cleanup      # 清理所有数据
 ```
 
 ### 5. 默认账号
 
 ```
 管理员: admin / admin123
-MySQL:  mgagent / mgagent_password_2024
 ```
 
 ## 方式二：本地开发模式
@@ -93,10 +87,14 @@ chmod +x scripts/init.sh
 ### 2. 启动服务
 
 ```bash
-# 启动所有服务
-./scripts/start-all.sh
+# SQLite 模式（默认，无需 Docker）
+./scripts/start-all.sh sqlite
 
-# 停止所有服务
+# MySQL 模式（需先启动 Docker 基础设施）
+./scripts/docker-services.sh start
+./scripts/start-all.sh mysql
+
+# 停止服务
 ./scripts/stop-all.sh
 
 # 检查服务状态
@@ -110,13 +108,12 @@ chmod +x scripts/init.sh
 ```bash
 # Chat 后端 (端口: 8000)
 cd mgagent-backend
-# 使用 .env.sqlite 配置
+# 使用 .env.sqlite 或 .env.mysql 配置
 source .env.sqlite
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Admin 后端 (端口: 8001)
 cd mgagent-admin-backend
-# 使用 .env.sqlite 配置
 source .env.sqlite
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
@@ -141,13 +138,13 @@ npm run dev
 ## 方式三：Docker Compose 直接部署
 
 ```bash
-# SQLite + ChromaDB 方案
-docker compose -f docker-compose.prod.yml up -d --build
+# 首次配置
+cp .env.production.example .env.production
 
-# MySQL + Milvus 方案（分层部署）
-# 第一步：启动基础设施
-docker compose -f docker-compose.infra.yml up -d
-# 第二步：启动应用层
+# 一键启动（推荐）
+./scripts/deploy.sh up
+
+# 或手动 Docker Compose
 docker compose -f docker-compose.prod.yml up -d --build
 ```
 

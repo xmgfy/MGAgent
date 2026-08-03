@@ -376,7 +376,7 @@ ModuleNotFoundError: No module named 'xxx'
 
 ```bash
 # 停止所有服务
-./scripts/deploy.sh stop
+./scripts/deploy.sh down
 
 # 清理所有数据（SQLite 方案）
 rm -rf mgagent-backend/data/chroma
@@ -387,19 +387,18 @@ rm -f mgagent-backend/data/chat.db
 docker compose -f docker-compose.infra.yml down -v
 
 # 重新启动
-./scripts/deploy.sh sqlite   # 或 mysql
-```
+./scripts/deploy.sh up
 
-### 快速重启
+# 快速重启
 
 ```bash
 # 本地开发
 ./scripts/stop-all.sh
-./scripts/start-all.sh
+./scripts/start-all.sh sqlite
 
 # Docker
-./scripts/deploy.sh stop
-./scripts/deploy.sh sqlite   # 或 mysql
+./scripts/deploy.sh down
+./scripts/deploy.sh up
 ```
 
 ## 联系支持

@@ -21,12 +21,17 @@ MGAgent 提供两种 Docker Compose 部署方案：
 # 添加执行权限
 chmod +x scripts/deploy.sh
 
-# 交互式选择方案
-./scripts/deploy.sh
+# 首次部署前，复制配置模板
+cp .env.production.example .env.production
 
-# 或直接指定方案
-./scripts/deploy.sh sqlite    # SQLite + ChromaDB
-./scripts/deploy.sh mysql     # MySQL + Milvus
+# 启动所有服务（自动构建镜像 + 启动基础设施和应用层）
+./scripts/deploy.sh up
+
+# 其他操作
+./scripts/deploy.sh down       # 停止所有服务
+./scripts/deploy.sh status     # 查看状态
+./scripts/deploy.sh logs       # 查看日志
+./scripts/deploy.sh restart    # 重启
 ```
 
 ## 方式二：手动 Docker Compose

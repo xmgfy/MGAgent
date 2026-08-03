@@ -124,11 +124,12 @@ git clone https://github.com/xmgfy/MGAgent.git
 cd MGAgent
 
 # 一键生产部署（推荐）
-./scripts/deploy.sh sqlite
+cp .env.production.example .env.production  # 首次配置
+./scripts/deploy.sh up
 
 # 或本地开发模式
 ./scripts/init.sh
-./scripts/start-all.sh
+./scripts/start-all.sh sqlite
 ```
 
 ## 默认账号

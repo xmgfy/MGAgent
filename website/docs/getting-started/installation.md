@@ -113,15 +113,15 @@ cd MGAgent
 ### 配置环境变量
 
 ```bash
-# 复制环境变量模板
-cp .env.example .env.prod
+# 生产环境：复制配置模板
+cp .env.production.example .env.production
 
 # 根据实际需求修改配置
-vim .env.prod
+vim .env.production
 ```
 
-:::tip 最低配置
-如果您只是想快速体验，使用默认配置即可，无需修改任何参数。
+:::tip 本地开发
+本地开发模式下，`start-all.sh` 脚本会自动加载对应模式（sqlite/mysql）的环境变量，无需手动配置。
 :::
 
 ## 验证安装

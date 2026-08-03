@@ -91,8 +91,8 @@ curl http://localhost:19530/healthz
 ## 第三步：启动应用层
 
 ```bash
-# 方式一：使用 deploy.sh 脚本（已包含上述步骤）
-./scripts/deploy.sh mysql
+# 方式一：使用 deploy.sh 脚本（推荐，自动完成所有步骤）
+./scripts/deploy.sh up
 
 # 方式二：手动启动
 docker compose -f docker-compose.prod.yml up -d --build
@@ -196,8 +196,8 @@ EOF
 # 1. 启动 MySQL 基础设施
 ./scripts/docker-services.sh start
 
-# 2. 启动应用层（MySQL 方案）
-./scripts/deploy.sh mysql
+# 2. 启动应用层
+./scripts/deploy.sh up
 
 # 3. 在 Admin 后台重新上传知识库文档
 # （SQLite 的 ChromaDB 数据需要重新导入到 Milvus）

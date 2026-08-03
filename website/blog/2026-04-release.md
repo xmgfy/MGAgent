@@ -56,11 +56,9 @@ git clone https://github.com/xmgfy/mgagent.git
 # 进入目录
 cd mgagent
 
-# SQLite 方案一键启动
-./scripts/deploy.sh sqlite
-
-# 或 MySQL 方案一键启动
-./scripts/deploy.sh mysql
+# 生产部署
+cp .env.production.example .env.production  # 首次配置
+./scripts/deploy.sh up
 ```
 
 ## 致谢

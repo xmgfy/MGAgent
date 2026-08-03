@@ -44,16 +44,20 @@ data/
 mgagent-backend/data/
 mgagent-admin-backend/data/
 
+# SQLite 数据库文件
+*.db
+
 # 日志文件
 *.log
 logs/
 
-# 环境变量文件
+# 环境变量文件（敏感信息）
 .env
 .env.local
 .env.*.local
 .env.docker
-# 保留 .env.example 作为模板
+.env.production
+# 保留 .env.production.example 作为模板
 
 # 临时文件
 tmp/

@@ -70,8 +70,12 @@ npm install
 ### 一键启动
 
 ```bash
-# 启动所有服务
-./scripts/start-all.sh
+# SQLite 模式（默认，无需 Docker）
+./scripts/start-all.sh sqlite
+
+# MySQL 模式（需先启动 Docker 基础设施）
+./scripts/docker-services.sh start
+./scripts/start-all.sh mysql
 
 # 停止所有服务
 ./scripts/stop-all.sh
@@ -100,19 +104,19 @@ npm install
 
 ## 手动启动
 
-### 启动 Chat 后端
+### 启动 Chat 后端（SQLite 模式）
 
 ```bash
 cd mgagent-backend
-export DATABASE_SCHEME=sqlite
+source .env.sqlite
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 ```
 
-### 启动 Admin 后端
+### 启动 Admin 后端（SQLite 模式）
 
 ```bash
 cd mgagent-admin-backend
-export DATABASE_SCHEME=sqlite
+source .env.sqlite
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
@@ -141,28 +145,17 @@ npm run dev -- --port 5174
 ./scripts/docker-services.sh start
 ```
 
-### 2. 配置环境变量
-
-```bash
-export DATABASE_SCHEME=mysql
-export MYSQL_HOST=localhost
-export MYSQL_PORT=3306
-export MYSQL_USER=mgagent
-export MYSQL_PASSWORD=mgagent_password_2024
-export MYSQL_DATABASE=mgagent
-export MILVUS_HOST=localhost
-export MILVUS_PORT=19530
-```
-
-### 3. 启动后端服务
+### 2. 启动后端服务（MySQL 模式）
 
 ```bash
 # Chat 后端
 cd mgagent-backend
+source .env.mysql
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Admin 后端
 cd ../mgagent-admin-backend
+source .env.mysql
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
@@ -202,7 +195,7 @@ rm -rf mgagent-backend/data/chroma mgagent-backend/data/documents
 
 # 重新初始化
 ./scripts/init.sh
-./scripts/start-all.sh
+./scripts/start-all.sh sqlite
 ```
 
 ## 下一步

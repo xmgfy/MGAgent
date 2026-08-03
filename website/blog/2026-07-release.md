@@ -39,14 +39,14 @@ MGAgent 现已支持两套技术栈方案，可根据部署场景灵活选择：
 新增 `deploy.sh` 一键部署脚本：
 
 ```bash
-# SQLite 方案
-./scripts/deploy.sh sqlite
-
-# MySQL 方案
-./scripts/deploy.sh mysql
+# 启动所有服务（基础设施 + 应用层）
+./scripts/deploy.sh up
 
 # 停止所有服务
-./scripts/deploy.sh stop
+./scripts/deploy.sh down
+
+# 查看状态
+./scripts/deploy.sh status
 ```
 
 ## 优化与改进
