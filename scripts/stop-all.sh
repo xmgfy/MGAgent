@@ -1,7 +1,28 @@
 #!/bin/bash
 
+# ============================================
+# MGAgent 一键停止脚本
+# 支持参数:
+#   --app-only  仅停止前后端应用，不停止基建服务
+#   (无参数)    停止所有服务（含基建）
+# ============================================
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+APP_ONLY=false
+if [ "$1" = "--app-only" ]; then
+    APP_ONLY=true
+fi
+
 echo "========================================="
-echo "  MGAgent 一键停止脚本"
+echo -e "  ${CYAN}MGAgent 一键停止脚本${NC}"
+if [ "$APP_ONLY" = true ]; then
+    echo -e "  ${YELLOW}(仅前后端应用，保留基建)${NC}"
+fi
 echo "========================================="
 echo ""
 
@@ -154,13 +175,31 @@ echo "-----------------------------------------"
 stop_service "mgagent-admin-frontend" "5174" "admin-frontend"
 echo ""
 
+# ========== 停止 Docker 基础设施 (仅非 app-only 模式) ==========
+if [ "$APP_ONLY" = false ]; then
+    echo "[基建] 停止 Docker 基础设施服务..."
+    echo "-----------------------------------------"
+    if [ -f "$SCRIPT_DIR/docker-services.sh" ]; then
+        "$SCRIPT_DIR/docker-services.sh" stop
+    else
+        echo "  docker-services.sh 不存在，跳过"
+    fi
+    echo ""
+else
+    echo -e "${YELLOW}[基建] app-only 模式: 保留 Docker 基础设施运行${NC}"
+    echo ""
+fi
+
 echo "========================================="
-echo "  所有服务已停止!"
+echo -e "  ${GREEN}所有服务已停止!${NC}"
+if [ "$APP_ONLY" = true ]; then
+    echo -e "  ${YELLOW}(基建服务保持运行)${NC}"
+fi
 echo "========================================="
 echo ""
 
-# 验证所有服务是否已停止
-echo "验证服务状态:"
+# 验证所有应用服务是否已停止
+echo "验证应用服务状态:"
 echo ""
 
 check_port() {
@@ -181,11 +220,15 @@ check_port 5174 || all_clean=false
 
 echo ""
 if [ "$all_clean" = true ]; then
-    echo "所有端口已成功释放!"
+    echo "所有应用端口已成功释放!"
 else
     echo "警告: 部分端口仍在占用，请手动检查!"
     echo "可使用命令: lsof -i :8000 :8001 :5173 :5174"
 fi
 echo ""
-echo "启动服务请运行: ./scripts/start-all.sh"
+if [ "$APP_ONLY" = true ]; then
+    echo "启动应用请运行: ./scripts/start-all.sh app"
+else
+    echo "启动服务请运行: ./scripts/start-all.sh [sqlite|mysql|app]"
+fi
 echo ""

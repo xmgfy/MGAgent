@@ -48,13 +48,24 @@ class AdminSession(Base):
 
 class ModelConfig(Base):
     __tablename__ = "model_configs"
-    
+
     id = Column(String(64), primary_key=True, index=True)
-    name = Column(String(100), unique=True, index=True, nullable=False)
-    api_key = Column(String(500), nullable=False)
-    api_base = Column(String(200), nullable=False)
+    name = Column(String(100), index=True, nullable=False)
+    model_type = Column(String(20), nullable=False, default="chat")
+    provider = Column(String(50), nullable=False, default="openai")
+    api_key = Column(String(500), nullable=True)
+    api_base = Column(String(300), nullable=True)
     model_name = Column(String(100), nullable=False)
+    dimension = Column(Integer, nullable=True)
+    is_local = Column(Boolean, default=False)
     is_active = Column(Boolean, default=False)
+    tenant_id = Column(String(64), nullable=True, index=True)
+    scenario = Column(String(50), nullable=True, index=True)
+    temperature = Column(Float, nullable=True)
+    top_p = Column(Float, nullable=True)
+    max_tokens = Column(Integer, nullable=True)
+    presence_penalty = Column(Float, nullable=True)
+    frequency_penalty = Column(Float, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -87,19 +98,17 @@ class User(Base):
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     tenant = relationship("Tenant", back_populates="users")
-    sessions = relationship("ChatSession", back_populates="user", cascade="all, delete-orphan")
 
 class ChatSession(Base):
     __tablename__ = "chat_sessions"
     
     id = Column(String(64), primary_key=True, index=True)
-    user_id = Column(String(64), ForeignKey("users.id"))
+    user_id = Column(String(64), index=True)
     title = Column(String(200), default="新对话")
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
     
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
-    user = relationship("User", back_populates="sessions")
 
 class ChatMessage(Base):
     __tablename__ = "chat_messages"
@@ -150,5 +159,20 @@ class SecurityRule(Base):
     description = Column(String(500), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
     updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
-    
+
     tenant = relationship("Tenant")
+
+
+class EmbeddingConfig(Base):
+    """Embedding 模型配置表 - 保证索引和查询使用同一模型"""
+    __tablename__ = "embedding_configs"
+
+    id = Column(String(64), primary_key=True, index=True)
+    provider = Column(String(50), nullable=False)
+    model_name = Column(String(100), nullable=False)
+    api_key = Column(String(500), nullable=False)
+    api_base = Column(String(300), nullable=False)
+    dimension = Column(Integer, nullable=False, default=1536)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())

@@ -20,6 +20,7 @@ MGAgent 在 `scripts/` 目录下提供了一系列工具脚本，用于简化部
 | `status.sh` | 检查服务状态 | 运维监控 |
 | `deploy.sh` | 一键生产部署 | 生产环境部署 |
 | `docker-services.sh` | 基础设施服务管理 | MySQL 模式本地调试 |
+| `download_local_models.py` | 下载本地 Embedding 模型 | 部署阶段下载 AI 模型 |
 
 ## init.sh - 项目初始化
 
@@ -370,6 +371,114 @@ flowchart LR
 #   zilliz/attu:v2.4
 ```
 
+## download_local_models.py - 本地 Embedding 模型下载
+
+用于在部署阶段预下载本地 Embedding 模型，避免在产品使用时下载导致卡顿。
+
+### 使用方法
+
+```bash
+cd mgagent-admin-backend
+
+# 列出所有可用模型
+python scripts/download_local_models.py --list
+
+# 下载指定模型
+python scripts/download_local_models.py --model bge-small-zh
+
+# 下载多个模型（逗号分隔）
+python scripts/download_local_models.py --models bge-small-zh,bge-large-zh
+
+# 下载所有推荐模型
+python scripts/download_local_models.py --all
+
+# 指定缓存目录
+python scripts/download_local_models.py --model bge-small-zh --cache-dir /opt/models/hf
+
+# 以 JSON 格式输出模型列表
+python scripts/download_local_models.py --list --json
+```
+
+### 支持的参数
+
+| 参数 | 说明 |
+|------|------|
+| `--list` | 列出所有可用模型 |
+| `--model <ID>` | 下载单个模型 |
+| `--models <IDs>` | 下载多个模型（逗号分隔） |
+| `--all` | 下载所有推荐模型 |
+| `--cache-dir <path>` | 指定缓存目录（默认：`~/.cache/huggingface`） |
+| `--json` | 以 JSON 格式输出列表 |
+
+### 可用模型列表
+
+| 模型 ID | 模型名称 | 维度 | 大小 | 说明 |
+|---------|---------|------|------|------|
+| bge-small-zh | BAAI/bge-small-zh-v1.5 | 512 | ~100MB | 轻量级，适合调试 |
+| bge-base-zh | BAAI/bge-base-zh-v1.5 | 768 | ~400MB | 效果均衡 |
+| bge-large-zh | BAAI/bge-large-zh-v1.5 | 1024 | ~1.3GB | 最佳效果 |
+| bge-m3 | BAAI/bge-m3 | 1024 | ~2.3GB | 中英双语 |
+| m3e-base | moka-ai/m3e-base | 768 | ~400MB | 开源社区常用 |
+| m3e-large | moka-ai/m3e-large | 1024 | ~1.3GB | 中文大模型 |
+| gte-base-zh | thenlper/gte-base-zh | 768 | ~400MB | 阿里达摩院 |
+| gte-large-zh | thenlper/gte-large-zh | 1024 | ~1.3GB | 阿里达摩院大模型 |
+| jina-embeddings-v2-base-zh | jinaai/jina-embeddings-v2-base-zh | 768 | ~400MB | Jina 出品 |
+| paraphrase-multilingual | paraphrase-multilingual-MiniLM-L12-v2 | 384 | ~120MB | 多语言，体积最小 |
+
+### 推荐选择
+
+| 场景 | 推荐模型 |
+|------|---------|
+| 调试开发 | bge-small-zh |
+| 小规模知识库 (<10万文档) | bge-base-zh |
+| 生产环境 (10万+文档) | bge-large-zh |
+| 中英文混合 | bge-m3 |
+| 资源受限 | paraphrase-multilingual |
+
+### 输出示例
+
+```
+======================================================================
+可用的本地 Embedding 模型列表
+======================================================================
+ID                        模型名称                                     维度       大小         语言
+----------------------------------------------------------------------
+bge-small-zh              BAAI/bge-small-zh-v1.5                   512      100        zh
+bge-base-zh               BAAI/bge-base-zh-v1.5                    768      400        zh
+...
+----------------------------------------------------------------------
+
+正在下载模型: BGE Small (中文轻量)
+   模型名称: BAAI/bge-small-zh-v1.5
+   向量维度: 512
+   模型大小: ~100MB
+
+✅ 模型下载成功！
+   实际维度: 512
+```
+
+### 注意事项
+
+:::warning 国内网络
+国内网络环境下，脚本会自动使用 `https://hf-mirror.com` 镜像源加速下载。如需手动配置：
+```bash
+export HF_ENDPOINT=https://hf-mirror.com
+```
+:::
+
+:::tip 依赖安装
+首次使用前需安装 `sentence-transformers` 库：
+```bash
+pip install sentence-transformers
+```
+:::
+
+:::warning 磁盘空间
+下载模型需要预留足够磁盘空间，单个模型大小从 100MB 到 2.3GB 不等。
+:::
+
+更多模型信息请参考 [模型配置文档](/architecture/model-config#本地-embedding-模型)。
+
 ## 快速参考卡片
 
 ```bash
@@ -393,6 +502,11 @@ cp .env.production.example .env.production  # 首次配置
 ./scripts/deploy.sh status          # 查看状态
 ./scripts/deploy.sh logs            # 查看日志
 ./scripts/deploy.sh restart         # 重启
+
+# 下载本地 Embedding 模型（部署时使用）
+cd mgagent-admin-backend
+python scripts/download_local_models.py --list           # 列出可用模型
+python scripts/download_local_models.py --model bge-small-zh  # 下载指定模型
 ```
 
 ## 注意事项

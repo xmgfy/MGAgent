@@ -6,3 +6,4 @@ from .system import router as system_router
 from .storage import router as storage_router
 from .knowledge import router as knowledge_router
 from .vector import router as vector_router
+from .security import router as security_router

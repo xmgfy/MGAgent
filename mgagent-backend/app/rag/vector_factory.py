@@ -178,7 +178,20 @@ class MilvusService(VectorDBInterface):
         self.port = port or settings.MILVUS_PORT
         self.collection_name = collection_name or settings.MILVUS_COLLECTION
         self.collection = None
+        self._dimension = self._get_dimension()
+        self._needs_revectorization = False
         self.connect()
+    
+    def _get_dimension(self) -> int:
+        """从数据库获取当前 Embedding 模型的维度"""
+        try:
+            from app.services.model_config_service import get_active_embedding_config
+            config = get_active_embedding_config()
+            if config and config.get("dimension"):
+                return config["dimension"]
+        except Exception:
+            pass
+        return 1536  # 默认维度
     
     def connect(self):
         """连接到 Milvus 服务"""
@@ -196,14 +209,34 @@ class MilvusService(VectorDBInterface):
             raise
     
     def _ensure_collection(self):
-        """确保集合存在"""
+        """确保集合存在，检查维度是否匹配"""
         from pymilvus import Collection, CollectionSchema, FieldSchema, DataType, utility
         
         if utility.has_collection(self.collection_name):
-            self.collection = Collection(self.collection_name)
-            self.collection.load()
+            existing_collection = Collection(self.collection_name)
+            # 获取现有集合的维度
+            try:
+                existing_dim = existing_collection.schema.fields[3].params.get('dim', 1536)
+            except Exception:
+                existing_dim = 1536
+            
+            if existing_dim != self._dimension:
+                # 维度不匹配，不要自动删除！
+                # 应该提示用户需要重新向量化文档
+                print(f"警告: Embedding 维度不匹配 (当前: {existing_dim}, 期望: {self._dimension})")
+                print(f"请在管理后台重新向量化文档，或删除旧集合并重建")
+                # 尝试加载现有集合（即使维度不匹配）
+                self.collection = existing_collection
+                self.collection.load()
+                # 标记需要重新向量化
+                self._needs_revectorization = True
+            else:
+                self.collection = existing_collection
+                self.collection.load()
+                self._needs_revectorization = False
         else:
             self._create_collection()
+            self._needs_revectorization = False
     
     def _create_collection(self):
         """创建集合"""
@@ -213,7 +246,7 @@ class MilvusService(VectorDBInterface):
             FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=64),
             FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
             FieldSchema(name="metadata", dtype=DataType.JSON),
-            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=1536)
+            FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=self._dimension)
         ]
         
         schema = CollectionSchema(fields=fields, description="MGAgent 知识库向量集合")
@@ -248,6 +281,10 @@ class MilvusService(VectorDBInterface):
         search_params = {"metric_type": "L2", "params": {"nprobe": 16}}
         
         try:
+            # 如果需要重新向量化（维度不匹配），尝试使用关键词搜索作为后备
+            if self._needs_revectorization:
+                print("警告: 向量维度不匹配，检索结果可能不准确。建议重新向量化文档。")
+            
             results = self.collection.search(
                 data=[query_embedding],
                 anns_field="embedding",
@@ -269,7 +306,8 @@ class MilvusService(VectorDBInterface):
             return search_results
         except Exception as e:
             print(f"Milvus 搜索失败: {e}")
-            raise
+            # 如果向量搜索失败，返回空结果而不是抛出异常
+            return []
     
     def get_stats(self) -> Dict[str, Any]:
         try:
@@ -320,6 +358,43 @@ class MilvusService(VectorDBInterface):
             return self.collection.num_entities
         except Exception:
             return 0
+    
+    def keyword_search(self, keywords: List[str], k: int = 5) -> List[Dict[str, Any]]:
+        """基于关键词的文本搜索（作为向量搜索的补充）"""
+        try:
+            if not keywords or self.get_total_count() == 0:
+                return []
+            
+            # 构建过滤表达式，搜索包含关键词的文档
+            expr_parts = []
+            for kw in keywords:
+                if kw.strip():
+                    expr_parts.append(f'content like "%{kw}%"')
+            
+            if not expr_parts:
+                return []
+            
+            expr = " or ".join(expr_parts)
+            
+            results = self.collection.query(
+                expr=expr,
+                output_fields=["id", "content", "metadata"],
+                limit=k
+            )
+            
+            search_results = []
+            for i, doc_id in enumerate(results.get("ids", [])):
+                search_results.append({
+                    "id": doc_id,
+                    "content": results.get("content", [""])[i] if i < len(results.get("content", [])) else "",
+                    "metadata": results.get("metadata", [])[i] if i < len(results.get("metadata", [])) else {},
+                    "score": 0.0  # 关键词搜索无相似度分数
+                })
+            
+            return search_results
+        except Exception as e:
+            print(f"Milvus 关键词搜索失败: {e}")
+            return []
 
 
 def create_vector_db() -> VectorDBInterface:

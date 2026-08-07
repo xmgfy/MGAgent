@@ -169,8 +169,19 @@ class MilvusService(VectorDBInterface):
         self._collection_name = "mgagent_knowledge"
         self._host = settings.MILVUS_HOST
         self._port = settings.MILVUS_PORT
-        self._dimension = 1536  # 默认维度，根据 embedding 模型调整
+        self._dimension = self._get_dimension()
         self._initialize_client()
+    
+    def _get_dimension(self) -> int:
+        """从数据库获取当前 Embedding 模型的维度"""
+        try:
+            from app.services.model_config_service import get_active_embedding_config
+            config = get_active_embedding_config()
+            if config and config.get("dimension"):
+                return config["dimension"]
+        except Exception:
+            pass
+        return 1536  # 默认维度
     
     def _initialize_client(self):
         """初始化 Milvus 客户端"""
@@ -183,28 +194,38 @@ class MilvusService(VectorDBInterface):
             # 连接到 Milvus
             connections.connect(host=self._host, port=self._port, db_name="default")
             
-            # 创建或获取集合
-            if not utility.has_collection(self._collection_name):
-                fields = [
-                    FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=256),
-                    FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=self._dimension),
-                    FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
-                    FieldSchema(name="metadata", dtype=DataType.JSON),
-                ]
-                schema = CollectionSchema(fields, description="MGAgent 知识库集合")
-                self._collection = Collection(self._collection_name, schema)
+            # 检查现有集合的维度
+            if utility.has_collection(self._collection_name):
+                existing_collection = Collection(self._collection_name)
+                existing_dim = existing_collection.schema.fields[1].params.get('dim', 1536)
                 
-                # 创建索引
-                index_params = {
-                    "metric_type": "COSINE",
-                    "index_type": "IVF_FLAT",
-                    "params": {"nlist": 1024}
-                }
-                self._collection.create_index(field_name="embedding", index_params=index_params)
-            else:
-                self._collection = Collection(self._collection_name)
-                self._collection.load()
-                
+                if existing_dim != self._dimension:
+                    # 维度不匹配，删除旧集合并重建
+                    print(f"Embedding 维度变更: {existing_dim} -> {self._dimension}，重建集合...")
+                    utility.drop_collection(self._collection_name)
+                else:
+                    self._collection = existing_collection
+                    self._collection.load()
+                    return
+            
+            # 创建新集合
+            fields = [
+                FieldSchema(name="id", dtype=DataType.VARCHAR, is_primary=True, max_length=256),
+                FieldSchema(name="embedding", dtype=DataType.FLOAT_VECTOR, dim=self._dimension),
+                FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
+                FieldSchema(name="metadata", dtype=DataType.JSON),
+            ]
+            schema = CollectionSchema(fields, description="MGAgent 知识库集合")
+            self._collection = Collection(self._collection_name, schema)
+            
+            # 创建索引
+            index_params = {
+                "metric_type": "COSINE",
+                "index_type": "IVF_FLAT",
+                "params": {"nlist": 1024}
+            }
+            self._collection.create_index(field_name="embedding", index_params=index_params)
+            
         except Exception as e:
             raise Exception(f"Milvus 初始化失败: {str(e)}")
     
@@ -293,16 +314,19 @@ class MilvusService(VectorDBInterface):
         try:
             from pymilvus import Collection
             self._collection = Collection(self._collection_name)
+            self._collection.load()
             
+            # Milvus 要求非空的过滤表达式，使用 id != "" 匹配所有记录
             results = self._collection.query(
-                expr="",
-                output_fields=["content", "metadata"]
+                expr='id != ""',
+                output_fields=["content", "metadata"],
+                limit=16384
             )
             
             chunks = []
             for result in results:
                 chunks.append({
-                    "id": result["id"],
+                    "id": result.get("id", ""),
                     "content": result.get("content", ""),
                     "metadata": result.get("metadata", {})
                 })

@@ -140,10 +140,18 @@ async def execute_query(
     try:
         eng = get_ensure_engine()
         query = request.query.strip()
+        
+        # 安全检查：禁止危险操作
+        dangerous_keywords = ['drop', 'truncate', 'delete', 'alter']
+        query_lower = query.lower()
+        for kw in dangerous_keywords:
+            if query_lower.startswith(kw):
+                raise HTTPException(status_code=403, detail=f"禁止执行 {kw.upper()} 操作")
+
         conn = eng.connect()
         result = conn.execute(text(query))
         
-        if query.lower().startswith('select'):
+        if query_lower.startswith('select') or query_lower.startswith('show') or query_lower.startswith('describe') or query_lower.startswith('explain'):
             columns = list(result.keys())
             rows = result.fetchall()
             
@@ -157,6 +165,10 @@ async def execute_query(
             conn.commit()
             conn.close()
             return {"message": f"执行成功，影响 {result.rowcount} 行"}
+    except HTTPException:
+        if conn:
+            conn.close()
+        raise
     except Exception as e:
         if conn:
             conn.rollback()

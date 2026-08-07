@@ -8,7 +8,8 @@ import {
   Settings,
   Server,
   ChevronRight,
-  Users
+  Users,
+  Shield
 } from 'lucide-react'
 
 interface SidebarProps {
@@ -21,8 +22,9 @@ const menuItems = [
   { id: 'knowledge-base', label: '知识库管理', icon: FileText },
   { id: 'vector-db', label: '向量数据库', icon: Box },
   { id: 'storage-db', label: '存储数据库', icon: Database },
-  { id: 'model', label: '模型管理', icon: Cpu },
+  { id: 'model', label: '配置管理', icon: Cpu },
   { id: 'users', label: '用户管理', icon: Users },
+  { id: 'security', label: '安全规则', icon: Shield },
   { id: 'system', label: '监控管理', icon: Server },
 ]
 

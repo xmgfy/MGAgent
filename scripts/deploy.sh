@@ -186,6 +186,23 @@ show_status() {
     show_access_info
 }
 
+# 获取本机 IP（兼容 macOS / Linux）
+get_local_ip() {
+    local ip=""
+    if command -v hostname >/dev/null 2>&1; then
+        # Linux hostname -I 返回所有 IP，取第一个
+        if hostname -I >/dev/null 2>&1; then
+            ip=$(hostname -I 2>/dev/null | awk '{print $1}')
+        fi
+    fi
+    # macOS hostname 不带 -I，用 ifconfig 取首个非回环 IP
+    if [ -z "$ip" ]; then
+        ip=$(ifconfig 2>/dev/null | grep -E 'inet ' | grep -v '127\.' | awk '{print $2}' | head -1)
+    fi
+    # 最后兜底：默认 localhost
+    echo "${ip:-localhost}"
+}
+
 # 显示访问信息
 show_access_info() {
     source "$ENV_FILE" 2>/dev/null || true
@@ -194,7 +211,7 @@ show_access_info() {
     ADMIN_PORT="${ADMIN_FRONTEND_PORT:-3001}"
     ATTU_PORT="${ATTU_PORT:-8003}"
     
-    SERVER_IP=$(hostname -I 2>/dev/null | awk '{print $1}' || echo "localhost")
+    SERVER_IP=$(get_local_ip)
     
     echo -e "${CYAN}访问地址:${NC}"
     echo "  Chat 前端:   http://$SERVER_IP:$CHAT_PORT"

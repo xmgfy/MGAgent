@@ -44,7 +44,18 @@ for dir_path in [DATA_DIR, DOCUMENT_DIR, CHROMA_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)
 
 
-def get_active_model_config():
-    """从数据库获取当前启用的模型配置，无配置时抛出异常"""
-    from app.services.model_config_service import get_active_model_config as get_config
-    return get_config()
+def get_active_model_config_row(model_type: str = "chat", tenant_id: str | None = None, scenario: str | None = None):
+    """获取 ORM 行 — 多租户+多场景优先级"""
+    from app.services.model_config_service import get_active_model_config_row as _get
+    return _get(model_type=model_type, tenant_id=tenant_id, scenario=scenario)
+
+
+def get_active_model_config(model_type: str = "chat", tenant_id: str | None = None, scenario: str | None = None) -> dict:
+    """获取 dict — 兼容旧调用方"""
+    from app.services.model_config_service import get_active_model_config_dict
+    return get_active_model_config_dict(model_type=model_type, tenant_id=tenant_id, scenario=scenario)
+
+
+def get_embedding_model_config():
+    from app.services.model_config_service import get_embedding_model_config
+    return get_embedding_model_config()

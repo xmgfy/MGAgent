@@ -271,33 +271,92 @@ def seed():
         
         print(f"  添加了 {len(notifications)} 条通知")
         
-        # 6. 添加模型配置
+        # 6. 添加模型配置（适配多租户 + 多场景 + 高级参数 schema）
         print("添加模型配置...")
         model_configs = [
+            # 全局默认 chat 模型
             ModelConfig(
                 id=str(uuid.uuid4()),
-                name="GPT-4 对话模型",
+                name="GPT-4o 全局对话默认",
+                model_type="chat",
+                provider="openai",
                 api_key="sk-test-key-123456",
                 api_base="https://api.openai.com/v1",
                 model_name="gpt-4o",
-                is_active=True
+                is_local=False,
+                is_active=True,
+                tenant_id=None,
+                scenario=None,
+                temperature=0.7,
+                top_p=1.0,
+                max_tokens=4096,
+                presence_penalty=0,
+                frequency_penalty=0,
             ),
+            # 金融公司C专用 chat 模型（tenant 级默认）
             ModelConfig(
                 id=str(uuid.uuid4()),
-                name="嵌入模型 BGE-M3",
-                api_key="sk-test-key-embedding",
-                api_base="https://api.example.com/v1",
-                model_name="bge-m3",
-                is_active=True
+                name="DeepSeek-V3 金融专用",
+                model_type="chat",
+                provider="deepseek",
+                api_key="sk-test-key-deepseek",
+                api_base="https://api.deepseek.com/v1",
+                model_name="deepseek-chat",
+                is_local=False,
+                is_active=True,
+                tenant_id=tenant_ids[2],  # 金融公司C
+                scenario=None,
+                temperature=0.3,  # 金融场景更确定性
+                top_p=0.9,
+                max_tokens=4096,
             ),
+            # RAG 专用 chat 模型（scenario 级默认）
             ModelConfig(
                 id=str(uuid.uuid4()),
-                name="GPT-3.5 对话模型",
-                api_key="sk-test-key-789012",
+                name="GPT-4o RAG 检索场景",
+                model_type="chat",
+                provider="openai",
+                api_key="sk-test-key-rag",
                 api_base="https://api.openai.com/v1",
-                model_name="gpt-3.5-turbo",
-                is_active=False
-            )
+                model_name="gpt-4o",
+                is_local=False,
+                is_active=True,
+                tenant_id=None,
+                scenario="rag",
+                temperature=0.1,  # RAG 追求事实准确性
+                top_p=0.9,
+                max_tokens=2048,
+            ),
+            # 全局默认 embedding 模型
+            ModelConfig(
+                id=str(uuid.uuid4()),
+                name="BAAI-bge-small-zh 全局Embedding",
+                model_type="embedding",
+                provider="local",
+                api_key="",
+                api_base=None,
+                model_name="BAAI/bge-small-zh-v1.5",
+                dimension=512,
+                is_local=True,
+                is_active=True,
+                tenant_id=None,
+                scenario=None,
+            ),
+            # 备选 embedding 配置（不激活，仅备用）
+            ModelConfig(
+                id=str(uuid.uuid4()),
+                name="BAAI-bge-m3 备选Embedding",
+                model_type="embedding",
+                provider="local",
+                api_key="",
+                api_base=None,
+                model_name="BAAI/bge-m3",
+                dimension=1024,
+                is_local=True,
+                is_active=False,
+                tenant_id=None,
+                scenario=None,
+            ),
         ]
         for m in model_configs:
             session.add(m)

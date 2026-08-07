@@ -95,7 +95,10 @@ async def chat(
     user: Optional[User] = Depends(get_optional_user),
 ):
     """同步聊天"""
-    result = ChatService.chat(
+    import asyncio
+
+    result = await asyncio.to_thread(
+        ChatService.chat,
         db=db,
         message=request.message,
         session_id=request.session_id,

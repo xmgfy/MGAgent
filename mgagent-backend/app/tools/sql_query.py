@@ -1,11 +1,12 @@
 """
 SQL 查询工具 - 仅允许只读查询
+支持 SQLite 和 MySQL
 """
 import re
 import sqlite3
 from typing import Optional
 
-from app.config.settings import settings
+from app.config.config import settings, is_mysql_scheme
 
 
 # 危险 SQL 模式（黑名单）
@@ -55,6 +56,7 @@ def _is_safe_query(query: str) -> bool:
 def query_database(query: str) -> str:
     """
     查询数据库（仅支持 SELECT 语句）
+    支持 SQLite 和 MySQL
     
     Args:
         query: SQL SELECT 查询语句
@@ -66,8 +68,21 @@ def query_database(query: str) -> str:
         if not _is_safe_query(query):
             return "安全错误：仅允许执行 SELECT 查询语句，禁止任何修改操作"
         
-        conn = sqlite3.connect(settings.DATABASE_URL.replace("sqlite:///", ""))
-        conn.row_factory = sqlite3.Row
+        if is_mysql_scheme():
+            # MySQL 模式
+            import pymysql
+            conn = pymysql.connect(
+                host=settings.MYSQL_HOST,
+                port=settings.MYSQL_PORT,
+                user=settings.MYSQL_USER,
+                password=settings.MYSQL_PASSWORD,
+                database=settings.MYSQL_DATABASE,
+                charset='utf8mb4'
+            )
+        else:
+            # SQLite 模式
+            conn = sqlite3.connect(settings.DATABASE_URL.replace("sqlite:///", ""))
+            conn.row_factory = sqlite3.Row
         
         cursor = conn.cursor()
         cursor.execute(query)

@@ -9,6 +9,7 @@ from app.api.system import router as system_router
 from app.api.storage import router as storage_router
 from app.api.knowledge import router as knowledge_router
 from app.api.vector import router as vector_router
+from app.api.security import router as security_router
 from app.api.dashboard import router as dashboard_router
 from app.config.config import settings, get_scheme_info, get_database_scheme
 from app.db import init_db
@@ -39,13 +40,20 @@ app.include_router(system_router, prefix="/admin/api")
 app.include_router(storage_router, prefix="/admin/api")
 app.include_router(knowledge_router, prefix="/admin/api")
 app.include_router(vector_router, prefix="/admin/api")
+app.include_router(security_router, prefix="/admin/api")
 app.include_router(dashboard_router, prefix="/admin/api")
 
 @app.on_event("startup")
 async def startup_event():
     init_db()
-    
+
     db = next(get_db())
+    try:
+        from app.config.providers import seed_providers
+        seed_providers(db)
+    except Exception as e:
+        print(f"[startup] seed_providers failed (non-fatal): {e}")
+
     if not get_admin_by_username(db, "admin"):
         create_admin(
             db,

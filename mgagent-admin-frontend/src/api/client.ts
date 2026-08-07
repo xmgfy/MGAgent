@@ -63,6 +63,8 @@ export interface DocumentInfo {
   file_size: number
   created_at: string
   status: string
+  document_id?: string
+  storage_path?: string
 }
 
 export interface VectorDBStats {
@@ -92,13 +94,115 @@ export interface TableInfo {
 export interface ModelConfig {
   id: string
   name: string
+  model_type: string  // 'chat' or 'embedding'
+  provider: string    // openai, zhipu, dashscope, jina, local
   api_key: string
   api_key_masked: string
   api_base: string
   model_name: string
+  dimension?: number  // 仅 embedding 类型使用
+  is_local: boolean
   is_active: boolean
+  scenario?: string
+  tenant_id?: string
+  temperature?: number
+  top_p?: number
+  max_tokens?: number
+  presence_penalty?: number
+  frequency_penalty?: number
   created_at: string
   updated_at: string
+}
+
+export interface Provider {
+  id?: string
+  code: string
+  display_name: string
+  favicon_domain: string
+  default_api_base: string
+  supports_api_key: boolean
+  supports_local: boolean
+  supports_discover: boolean
+  supported_model_types: string[]
+  discover_endpoint?: string
+  fallback_models?: Record<string, string[]>
+  description?: string
+  api_key?: string
+  api_key_masked?: string
+  has_api_key?: boolean
+  is_system?: boolean
+  is_active?: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface ProviderCreateInput {
+  code: string
+  display_name: string
+  favicon_domain?: string
+  default_api_base?: string
+  supports_api_key: boolean
+  supports_local: boolean
+  supports_discover: boolean
+  supported_model_types: string[]
+  fallback_models?: Record<string, string[]>
+  description?: string
+  api_key?: string
+}
+
+export interface ProviderUpdateInput {
+  display_name?: string
+  favicon_domain?: string
+  default_api_base?: string
+  supports_api_key?: boolean
+  supports_local?: boolean
+  supports_discover?: boolean
+  supported_model_types?: string[]
+  fallback_models?: Record<string, string[]>
+  description?: string
+  api_key?: string
+  is_active?: boolean
+}
+
+export interface DiscoveredModel {
+  model_id: string
+  model_type: 'chat' | 'embedding' | 'reranker'
+  dimension?: number
+  owned_by?: string
+  size_mb?: number
+  modified_at?: string
+}
+
+export interface DiscoverModelsResponse {
+  provider: string
+  provider_name: string
+  total: number
+  chat_count: number
+  embedding_count: number
+  reranker_count: number
+  models: DiscoveredModel[]
+}
+
+export interface UserModelItem {
+  id: string
+  name: string
+  model_type: string
+  provider: string
+  model_name: string
+  dimension?: number
+  is_local: boolean
+  is_active: boolean
+}
+
+export interface LocalEmbeddingModel {
+  id: string
+  name: string
+  display_name: string
+  dimension: number
+  size_mb: number
+  language: string
+  description: string
+  recommended_for: string
 }
 
 export interface SystemStatus {
@@ -196,7 +300,19 @@ export interface UploadResponse {
   filename: string
   file_type: string
   file_size: number
-  chunks_count: number
+  chunks_count?: number
+  document_id?: string
+  status?: string
+}
+
+export interface EmbeddingPreset {
+  provider: string
+  name: string
+  model: string
+  api_base: string
+  dimension: number
+  description: string
+  requires_api_key: boolean
 }
 
 export interface PreviewResponse {
@@ -219,31 +335,48 @@ export const knowledgeBaseApi = {
     const response = await api.get('/knowledge-base/stats')
     return response.data
   },
-  
+
   getDocuments: async (): Promise<DocumentInfo[]> => {
     const response = await api.get('/knowledge-base/documents')
     return response.data
   },
-  
-  deleteDocument: async (filename: string): Promise<void> => {
-    await api.delete(`/knowledge-base/documents/${filename}`)
+
+  deleteDocument: async (documentId: string): Promise<void> => {
+    await api.delete(`/knowledge-base/documents/${documentId}`)
   },
-  
-  clear: async (): Promise<void> => {
-    await api.post('/knowledge-base/clear')
+
+  batchDelete: async (documentIds: string[]): Promise<{ deleted: string[]; failed: { id: string; reason: string }[] }> => {
+    const response = await api.post('/knowledge-base/documents/batch-delete', { document_ids: documentIds })
+    return response.data
   },
-  
-  upload: async (file: File): Promise<UploadResponse> => {
+
+  upload: async (file: File, onProgress?: (percent: number) => void): Promise<UploadResponse> => {
     const formData = new FormData()
     formData.append('file', file)
     const response = await api.post('/knowledge-base/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+          onProgress(percent)
+        }
+      }
     })
     return response.data
   },
-  
-  download: async (filename: string): Promise<void> => {
-    const response = await api.get(`/knowledge-base/documents/${filename}/download`, {
+
+  indexDocument: async (documentId: string): Promise<{ message: string; chunks_count: number; status: string; embedding_model?: string }> => {
+    const response = await api.post(`/knowledge-base/documents/${documentId}/index`, {})
+    return response.data
+  },
+
+  getEmbeddingPresets: async (): Promise<{ presets: EmbeddingPreset[] }> => {
+    const response = await api.get('/knowledge-base/embedding-presets')
+    return response.data
+  },
+
+  download: async (documentId: string, filename: string): Promise<void> => {
+    const response = await api.get(`/knowledge-base/documents/${documentId}/download`, {
       responseType: 'blob'
     })
     const url = window.URL.createObjectURL(new Blob([response.data]))
@@ -255,9 +388,9 @@ export const knowledgeBaseApi = {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
   },
-  
-  preview: async (filename: string): Promise<PreviewResponse> => {
-    const response = await api.get(`/knowledge-base/documents/${filename}/preview`)
+
+  preview: async (documentId: string): Promise<PreviewResponse> => {
+    const response = await api.get(`/knowledge-base/documents/${documentId}/preview`)
     return response.data
   },
 }
@@ -320,12 +453,94 @@ export const modelApi = {
     return response.data
   },
   
-  createConfig: async (config: { name: string; api_key: string; api_base: string; model_name: string }): Promise<ModelConfig> => {
+  getProviders: async (modelType?: string): Promise<Provider[]> => {
+    const response = await api.get('/model/providers', { params: { model_type: modelType } })
+    return response.data
+  },
+  
+  getModelList: async (modelType?: string, onlyActive: boolean = true): Promise<UserModelItem[]> => {
+    const response = await api.get('/model/list', { params: { model_type: modelType, only_active: onlyActive } })
+    return response.data
+  },
+
+  discoverModels: async (params: {
+    provider_code: string
+    api_base?: string
+    api_key?: string
+    model_type?: string
+  }): Promise<DiscoverModelsResponse> => {
+    const response = await api.post('/model/providers/discover-models', params)
+    return response.data
+  },
+
+  createProvider: async (data: ProviderCreateInput): Promise<Provider> => {
+    const response = await api.post('/model/providers', data)
+    return response.data
+  },
+
+  updateProvider: async (providerId: string, data: ProviderUpdateInput): Promise<Provider> => {
+    const response = await api.put(`/model/providers/${providerId}`, data)
+    return response.data
+  },
+
+  deleteProvider: async (providerId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/model/providers/${providerId}`)
+    return response.data
+  },
+
+  toggleProvider: async (providerId: string): Promise<Provider> => {
+    const response = await api.post(`/model/providers/${providerId}/toggle`)
+    return response.data
+  },
+  
+  getLocalModels: async (): Promise<LocalEmbeddingModel[]> => {
+    const response = await api.get('/model/local-models')
+    return response.data
+  },
+  
+  downloadLocalModel: async (modelId: string): Promise<{ status: string; message: string }> => {
+    const response = await api.post('/model/local-models/download', { model_id: modelId })
+    return response.data
+  },
+  
+  createConfig: async (config: {
+    name: string;
+    model_name: string;
+    model_type?: string;
+    provider?: string;
+    api_key?: string;
+    api_base?: string;
+    dimension?: number;
+    is_local?: boolean;
+    scenario?: string;
+    tenant_id?: string;
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+    presence_penalty?: number;
+    frequency_penalty?: number;
+  }): Promise<ModelConfig> => {
     const response = await api.post('/model/config', config)
     return response.data
   },
   
-  updateConfig: async (configId: string, config: { api_key?: string; api_base?: string; model_name?: string }): Promise<ModelConfig> => {
+  updateConfig: async (configId: string, config: {
+    name?: string;
+    model_name?: string;
+    model_type?: string;
+    provider?: string;
+    api_key?: string;
+    api_base?: string;
+    dimension?: number;
+    is_local?: boolean;
+    scenario?: string;
+    tenant_id?: string;
+    temperature?: number;
+    top_p?: number;
+    max_tokens?: number;
+    presence_penalty?: number;
+    frequency_penalty?: number;
+  }): Promise<ModelConfig> => {
     const response = await api.put(`/model/config/${configId}`, config)
     return response.data
   },
@@ -529,6 +744,74 @@ export const authApi = {
 export const dashboardApi = {
   getStats: async (): Promise<DashboardStats> => {
     const response = await api.get('/dashboard/stats')
+    return response.data
+  },
+}
+
+export interface SecurityRule {
+  id: string
+  tenant_id: string | null
+  rule_type: 'keyword' | 'regex'
+  content: string
+  action: 'block' | 'mask'
+  priority: number
+  is_active: boolean
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface SecurityRuleRequest {
+  rule_type: 'keyword' | 'regex'
+  content: string
+  action: 'block' | 'mask'
+  priority?: number
+  description?: string
+}
+
+export interface SecurityRuleUpdateRequest {
+  rule_type?: 'keyword' | 'regex'
+  content?: string
+  action?: 'block' | 'mask'
+  priority?: number
+  description?: string
+}
+
+export interface SecurityTestResult {
+  original: string
+  filtered: string
+  has_sensitive: boolean
+  matched_rules: Array<{ type: string; content: string; action: string }>
+}
+
+export const securityApi = {
+  getRules: async (): Promise<SecurityRule[]> => {
+    const response = await api.get('/security/rules')
+    return response.data
+  },
+
+  createRule: async (request: SecurityRuleRequest): Promise<SecurityRule> => {
+    const response = await api.post('/security/rules', request)
+    return response.data
+  },
+
+  updateRule: async (ruleId: string, request: SecurityRuleUpdateRequest): Promise<SecurityRule> => {
+    const response = await api.put(`/security/rules/${ruleId}`, request)
+    return response.data
+  },
+
+  toggleRule: async (ruleId: string): Promise<SecurityRule> => {
+    const response = await api.post(`/security/rules/${ruleId}/toggle`)
+    return response.data
+  },
+
+  deleteRule: async (ruleId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/security/rules/${ruleId}`)
+    return response.data
+  },
+
+  testFilter: async (content: string): Promise<SecurityTestResult> => {
+    const response = await api.post('/security/test', { content })
     return response.data
   },
 }

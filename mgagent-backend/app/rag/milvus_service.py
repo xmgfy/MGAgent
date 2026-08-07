@@ -24,7 +24,19 @@ class MilvusService:
         self.port = port or settings.MILVUS_PORT
         self.collection_name = collection_name or settings.MILVUS_COLLECTION
         self.collection = None
+        self._dimension = self._get_dimension()
         self.connect()
+    
+    def _get_dimension(self) -> int:
+        """从数据库获取当前 Embedding 模型的维度"""
+        try:
+            from app.services.model_config_service import get_active_embedding_config
+            config = get_active_embedding_config()
+            if config and config.get("dimension"):
+                return config["dimension"]
+        except Exception:
+            pass
+        return 1536  # 默认维度
     
     def connect(self):
         """连接到 Milvus 服务"""
@@ -40,10 +52,19 @@ class MilvusService:
             raise
     
     def _ensure_collection(self):
-        """确保集合存在"""
+        """确保集合存在，检查维度是否匹配"""
         if utility.has_collection(self.collection_name):
-            self.collection = Collection(self.collection_name)
-            self.collection.load()
+            existing_collection = Collection(self.collection_name)
+            existing_dim = existing_collection.schema.fields[3].params.get('dim', 1536)
+            
+            if existing_dim != self._dimension:
+                # 维度不匹配，删除旧集合并重建
+                print(f"Embedding 维度变更: {existing_dim} -> {self._dimension}，重建集合...")
+                utility.drop_collection(self.collection_name)
+                self._create_collection()
+            else:
+                self.collection = existing_collection
+                self.collection.load()
         else:
             self._create_collection()
     
@@ -68,7 +89,7 @@ class MilvusService:
             FieldSchema(
                 name="embedding",
                 dtype=DataType.FLOAT_VECTOR,
-                dim=1536  # 默认向量维度
+                dim=self._dimension
             )
         ]
         

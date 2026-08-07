@@ -159,6 +159,50 @@ source .env.mysql
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 ```
 
+## 本地 Embedding 模型部署（可选）
+
+如需使用本地 Embedding 模型替代云端 API（免费、无网络延迟），需在部署阶段完成模型下载。
+
+### 1. 安装依赖
+
+```bash
+cd mgagent-admin-backend
+pip install sentence-transformers
+```
+
+### 2. 下载模型
+
+```bash
+# 查看所有可用模型
+python scripts/download_local_models.py --list
+
+# 下载推荐的轻量模型（约 100MB）
+python scripts/download_local_models.py --model bge-small-zh
+
+# 或下载多个模型
+python scripts/download_local_models.py --models bge-small-zh,bge-base-zh
+```
+
+### 3. 在 Admin 端启用
+
+1. 启动服务后访问 Admin 前端（http://localhost:5174）
+2. 进入「模型管理」→「Embedding 模型」
+3. 点击「添加模型」，勾选「使用本地模型」
+4. 从下拉列表选择已下载的模型
+5. 保存并设为默认
+
+### 可用模型列表
+
+| 模型 ID | 模型名称 | 维度 | 大小 | 说明 |
+|---------|---------|------|------|------|
+| bge-small-zh | BAAI/bge-small-zh-v1.5 | 512 | ~100MB | 轻量级，适合调试 |
+| bge-base-zh | BAAI/bge-base-zh-v1.5 | 768 | ~400MB | 效果均衡 |
+| bge-large-zh | BAAI/bge-large-zh-v1.5 | 1024 | ~1.3GB | 最佳效果 |
+| bge-m3 | BAAI/bge-m3 | 1024 | ~2.3GB | 中英双语 |
+| paraphrase-multilingual | paraphrase-multilingual-MiniLM-L12-v2 | 384 | ~120MB | 多语言，体积最小 |
+
+更多模型信息请参考 [模型配置文档](/architecture/model-config#支持的模型列表)。
+
 ## 调试技巧
 
 ### 查看日志

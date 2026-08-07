@@ -50,8 +50,9 @@ const StorageDB = () => {
     try {
       const result = await storageDbApi.executeQuery(query)
       setQueryResult(result)
-    } catch (error) {
-      console.error('Failed to execute query:', error)
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.detail || error.message || '查询执行失败'
+      setQueryResult({ error: errorMsg })
     }
   }
 

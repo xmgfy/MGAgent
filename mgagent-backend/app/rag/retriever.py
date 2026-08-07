@@ -1,56 +1,45 @@
 """
 向量检索器 - 基于向量数据库的检索器
 支持 ChromaDB 和 Milvus
-模型配置从数据库读取，无兜底逻辑
+Embedding 模型从 model_configs 表读取，支持本地和云端模型
 """
 from langchain_core.documents import Document
 from typing import List, Optional
 from app.rag.vector_factory import get_vector_db
-from app.services.model_config_service import get_active_model_config
+from app.services.model_config_service import get_active_embedding_config, create_embeddings_model
 import uuid
-
-try:
-    from langchain_openai import OpenAIEmbeddings
-    OPENAI_AVAILABLE = True
-except ImportError:
-    OPENAI_AVAILABLE = False
 
 
 class VectorRetriever:
     """基于向量数据库的向量检索器"""
-    
+
     def __init__(self):
         self._current_config_id = None
         self.embeddings = self._init_embeddings()
         self.vector_db = get_vector_db()
-    
+
     def _init_embeddings(self):
-        """初始化嵌入模型，从数据库读取配置，无兜底"""
-        model_config = get_active_model_config()
-        
-        if not model_config:
-            raise ValueError("未配置活跃的模型，请在admin管理端配置并启用模型")
-        
-        self._current_config_id = model_config.get("id")
-        
-        if not OPENAI_AVAILABLE:
-            raise ImportError("langchain_openai 未安装，请执行: pip install langchain-openai")
-        
-        try:
-            return OpenAIEmbeddings(
-                api_key=model_config["api_key"],
-                base_url=model_config["api_base"],
-                model="text-embedding-3-small"
+        """初始化嵌入模型，从 model_configs 表读取配置"""
+        emb_config = get_active_embedding_config()
+
+        if not emb_config:
+            raise ValueError(
+                "未配置 Embedding 模型，请在模型管理中添加 Embedding 类型的模型并启用"
             )
+
+        self._current_config_id = emb_config.get("id")
+
+        try:
+            return create_embeddings_model(emb_config)
         except Exception as e:
             raise ValueError(f"初始化嵌入模型失败: {str(e)}")
-    
+
     def _check_and_reload(self):
-        """检查模型配置是否变更，若变更则重新加载嵌入模型"""
+        """检查 Embedding 配置是否变更，若变更则重新加载"""
         try:
-            model_config = get_active_model_config()
-            config_id = model_config.get("id") if model_config else None
-            
+            emb_config = get_active_embedding_config()
+            config_id = emb_config.get("id") if emb_config else None
+
             if config_id != self._current_config_id:
                 self.embeddings = self._init_embeddings()
                 self.vector_db = get_vector_db()
@@ -58,32 +47,49 @@ class VectorRetriever:
             raise
         except Exception:
             pass
-    
+
     def reload_embeddings(self):
         """重新加载嵌入模型配置"""
         self.embeddings = self._init_embeddings()
-    
+
     def add_documents(self, documents: List[Document]) -> List[str]:
         """添加文档到向量数据库"""
         self._check_and_reload()
-        
+
         if not documents:
             return []
-        
+
         texts = [doc.page_content for doc in documents]
         embeddings = self.embeddings.embed_documents(texts)
         ids = self.vector_db.add_documents(documents, embeddings)
         return ids
-    
+
     def similarity_search(self, query: str, k: int = 3) -> List[Document]:
-        """相似度搜索"""
+        """相似度搜索 - 使用混合检索策略"""
         self._check_and_reload()
-        
+
+        # 1. 向量检索
         query_embedding = self.embeddings.embed_query(query)
         results = self.vector_db.similarity_search(query_embedding, k=k)
         
+        # 2. 如果向量检索结果不够，尝试关键词搜索作为补充
+        if len(results) < k and hasattr(self.vector_db, 'keyword_search'):
+            # 提取关键词（简单分词）
+            keywords = [w for w in query if w.strip()]
+            keyword_results = self.vector_db.keyword_search(keywords, k=k - len(results))
+            
+            # 合并结果（去重）
+            existing_ids = {r["id"] for r in results}
+            for kr in keyword_results:
+                if kr["id"] not in existing_ids:
+                    # 为关键词搜索结果设置一个较高的相关性分数
+                    kr["score"] = kr.get("score", 0) - 10  # 降低关键词搜索的优先级
+                    results.append(kr)
+                    existing_ids.add(kr["id"])
+        
+        # 3. 转换为 LangChain Document 格式
         documents = []
-        for result in results:
+        for result in results[:k]:
             doc = Document(
                 page_content=result["content"],
                 metadata={
@@ -93,7 +99,7 @@ class VectorRetriever:
                 }
             )
             documents.append(doc)
-        
+
         return documents
     
     def get_retriever(self, k: int = 3, search_type: str = "similarity"):

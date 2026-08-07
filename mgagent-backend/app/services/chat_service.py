@@ -105,10 +105,7 @@ class ChatService:
         else:
             if user.status == "pending":
                 raise ForbiddenException("账号尚未通过审批，请联系管理员")
-            if user.chat_count >= user.max_chats:
-                raise ChatLimitExceededException(
-                    f"已达到最大问答次数限制（{user.max_chats}次），请联系管理员开通更多次数"
-                )
+            # 已登录用户不限问答次数，仅检查账号状态
 
     @staticmethod
     def _build_history(db: Session, session_id: str) -> list[dict]:
@@ -148,18 +145,9 @@ class ChatService:
         # 构建历史
         history = ChatService._build_history(db, session.id)
 
-        # 调用 Agent
+        # 调用 Agent（同步调用，在路由层已转为异步）
         try:
-            loop = asyncio.get_event_loop()
-            response = loop.run_in_executor(
-                None,
-                enterprise_agent.chat,
-                message,
-                history,
-            )
-            response_result = asyncio.get_event_loop().run_until_complete(
-                asyncio.wait_for(response, timeout=DEFAULT_TIMEOUT)
-            )
+            response_result = enterprise_agent.chat(message, history)
         except ValueError as e:
             error_msg = str(e)
             if "未配置有效的模型" in error_msg or "未配置活跃的模型" in error_msg:
@@ -167,9 +155,6 @@ class ChatService:
                 add_message(db, session.id, "assistant", error_content)
                 raise ModelNotConfiguredException()
             raise
-        except asyncio.TimeoutError:
-            add_message(db, session.id, "assistant", "请求超时，请稍后重试")
-            raise TimeoutException()
         except Exception as e:
             logger.error(f"聊天处理异常: {str(e)}")
             add_message(db, session.id, "assistant", f"处理请求时发生错误: {str(e)}")
