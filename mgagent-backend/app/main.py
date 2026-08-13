@@ -7,13 +7,20 @@ from fastapi.responses import JSONResponse
 
 from app.api.routes import router
 from app.db.database import init_db
-from app.config.config import settings, get_scheme_info, get_database_scheme
+from app.config.config import settings, get_scheme_info
 from app.exceptions import BusinessException
 from app.core.logger import logger
 import uvicorn
 
 # 初始化数据库
 init_db()
+
+# 确保 Default 知识库存在并迁移历史文档
+try:
+    from app.services.knowledge_base_service import create_default_knowledge_base
+    create_default_knowledge_base()
+except Exception as e:
+    print(f"[startup] create_default_knowledge_base failed (non-fatal): {e}")
 
 app = FastAPI(
     title="MGAgent 智能客服助手",
@@ -58,11 +65,10 @@ app.include_router(router, prefix="/api")
 
 @app.get("/")
 async def root():
-    scheme = get_database_scheme()
     return {
         "message": "MGAgent 智能客服助手 API",
         "version": "2.0.0",
-        "database_scheme": scheme.value,
+        "database_scheme": "mysql",
         "endpoints": {
             "chat": "/api/chat",
             "chat_stream": "/api/chat/stream",

@@ -1,5 +1,5 @@
 """
-本地文件存储实现 - SQLite 模式使用
+本地文件存储实现
 """
 import os
 import uuid

@@ -18,7 +18,7 @@ MGAgent 使用环境变量来控制服务行为。所有配置通过 Pydantic Ba
 # 生产环境配置
 cp .env.production.example .env.production
 
-# 或本地开发（自动加载 .env.sqlite / .env.mysql）
+# 本地开发直接使用 .env
 ```
 
 ### 环境变量文件加载顺序
@@ -39,14 +39,7 @@ cp .env.production.example .env.production
 | `DEBUG` | Boolean | `True` | 调试模式 |
 | `SECRET_KEY` | String | 自动生成 | JWT 密钥 |
 
-### SQLite 方案
-
-| 变量 | 类型 | 默认值 | 说明 |
-|------|------|--------|------|
-| `SQLITE_DB_PATH` | String | `data/chat.db` | SQLite 数据库文件路径 |
-| `CHROMA_PERSIST_DIR` | String | `data/chroma` | ChromaDB 持久化目录 |
-
-### MySQL 方案
+### MySQL 配置
 
 | 变量 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
@@ -64,11 +57,15 @@ cp .env.production.example .env.production
 | `MILVUS_PORT` | Int | `19530` | Milvus 端口 |
 | `MILVUS_COLLECTION` | String | `mgagent_knowledge` | Milvus 集合名称 |
 
-### 文档存储
+### MinIO 配置
 
 | 变量 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
-| `DOCUMENT_DIR` | String | `data/documents` | 上传文档存储目录 |
+| `MINIO_HOST` | String | `localhost` | MinIO 主机地址 |
+| `MINIO_PORT` | Int | `9000` | MinIO API 端口 |
+| `MINIO_ACCESS_KEY` | String | `minioadmin` | MinIO 访问密钥 |
+| `MINIO_SECRET_KEY` | String | `minioadmin` | MinIO 密钥 |
+| `MINIO_BUCKET` | String | `mgagent` | MinIO 存储桶名称 |
 
 ### 端口映射（Docker）
 
@@ -81,18 +78,15 @@ cp .env.production.example .env.production
 
 ## 使用示例
 
-### SQLite 方案（最简配置）
+### 本地开发
 
 ```bash
-# 复制 SQLite 模式配置
-cp .env.sqlite .env
-```
+# 确保 .env 中已配置 MySQL + Milvus + MinIO 连接信息
+# 启动 Docker 基础设施
+./scripts/docker-services.sh start
 
-### MySQL 方案
-
-```bash
-# 复制 MySQL 模式配置
-cp .env.mysql .env
+# 启动服务（自动加载 .env）
+./scripts/start-all.sh
 ```
 
 ### Docker 环境
@@ -104,7 +98,6 @@ cp .env.mysql .env
 services:
   mgagent-backend:
     environment:
-      - DATABASE_SCHEME=mysql
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_USER=${MYSQL_USER}
@@ -112,41 +105,23 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=mgagent
       - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
       - DEBUG=False
 ```
 
 ## 配置模板
 
-### .env.sqlite（SQLite 模式）
+### .env（本地开发）
 
 ```bash
-# MGAgent SQLite 模式配置
-# 适用于本地调试，无需外部数据库服务
+# MGAgent 本地开发配置
+# 统一使用 MySQL + Milvus + MinIO 技术栈
 
-DATABASE_SCHEME=sqlite
-API_HOST=0.0.0.0
-API_PORT=8000
-DEBUG=True
-
-# SQLite 配置
-SQLITE_DB_PATH=data/chat.db
-CHROMA_PERSIST_DIR=data/chroma
-
-# Admin API 地址
-ADMIN_API_URL=http://localhost:8001/admin/api
-
-# 文档存储目录
-DOCUMENT_DIR=data/documents
-```
-
-### .env.mysql（MySQL 模式）
-
-```bash
-# MGAgent MySQL 模式配置
-# 适用于生产级部署，需要 MySQL + Milvus 基础设施服务
-
-DATABASE_SCHEME=mysql
 API_HOST=0.0.0.0
 API_PORT=8000
 DEBUG=True
@@ -163,11 +138,15 @@ MILVUS_HOST=localhost
 MILVUS_PORT=19530
 MILVUS_COLLECTION=mgagent_knowledge
 
+# MinIO 配置
+MINIO_HOST=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=mgagent
+
 # Admin API 地址
 ADMIN_API_URL=http://localhost:8001/admin/api
-
-# 文档存储目录
-DOCUMENT_DIR=data/documents
 ```
 
 ### .env.production（生产环境）
@@ -206,13 +185,9 @@ from app.config.config import settings
 # 读取基础配置
 print(settings.API_PORT)         # 8000
 
-# 根据模式判断
-if settings.DATABASE_SCHEME == "mysql":
-    # MySQL 方案
-    pass
-else:
-    # SQLite 方案
-    pass
+# MySQL 连接信息
+print(settings.MYSQL_HOST)      # localhost
+print(settings.MYSQL_DATABASE)  # mgagent
 ```
 
 ### 获取数据库 URL
@@ -221,8 +196,7 @@ else:
 from app.config.config import get_database_url
 
 url = get_database_url()
-# SQLite: "sqlite:////path/to/app.db"
-# MySQL: "mysql+pymysql://mgagent:password@localhost:3306/mgagent?charset=utf8mb4"
+# "mysql+pymysql://mgagent:password@localhost:3306/mgagent?charset=utf8mb4"
 ```
 
 ## 环境变量与 Docker
@@ -233,7 +207,6 @@ url = get_database_url()
 services:
   mgagent-backend:
     environment:
-      - DATABASE_SCHEME=mysql
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_USER=${MYSQL_USER}
@@ -241,16 +214,20 @@ services:
       - MYSQL_DATABASE=${MYSQL_DATABASE}
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
+      - MINIO_HOST=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=${MINIO_ACCESS_KEY}
+      - MINIO_SECRET_KEY=${MINIO_SECRET_KEY}
+      - MINIO_BUCKET=mgagent
       - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
       - DEBUG=False
 ```
 
 :::tip Docker 网络
-在 Docker Compose 中，服务间通信使用 **服务名**（如 `mysql`、`milvus`），而不是 `localhost`。
+在 Docker Compose 中，服务间通信使用 **服务名**（如 `mysql`、`milvus`、`minio`），而不是 `localhost`。
 :::
 
 ## 相关文档
 
 - [Docker 配置](/configuration/docker)
 - [Nginx 配置](/configuration/nginx)
-- [双技术栈架构](/architecture/dual-stack)

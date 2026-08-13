@@ -61,7 +61,7 @@ cat mgagent-admin-frontend/admin-frontend.log | tail -50
 ```bash
 # 单独启动 Chat 后端
 cd mgagent-backend
-source .env.sqlite
+source .env
 python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # 查看是否有导入错误或配置错误
@@ -124,19 +124,6 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --getglobalstate
 ```
 
 ### 数据库连接失败
-
-#### SQLite 方案
-
-```bash
-# 检查数据库文件
-ls -la mgagent-backend/data/chat.db
-
-# 检查文件权限
-chmod 666 mgagent-backend/data/chat.db
-
-# 使用 sqlite3 客户端测试
-sqlite3 mgagent-backend/data/chat.db "SELECT 1"
-```
 
 #### MySQL 方案
 
@@ -226,7 +213,7 @@ tail -f mgagent-backend/backend.log
 # 4. 查看后端日志获取详细错误
 
 # 启用调试模式查看详细 SQL
-# .env.sqlite 或 .env.mysql 文件设置 DEBUG=True
+# .env 文件设置 DEBUG=True
 ```
 
 ## 性能问题
@@ -283,42 +270,29 @@ docker stats --no-stream
 ### 数据库文件损坏
 
 ```bash
-# SQLite 修复
-sqlite3 mgagent-backend/data/chat.db ".recover" | sqlite3 recovered.db
-
 # MySQL 修复
 mysqlcheck -u root -p mgagent
 mysqlcheck -u root -p --repair mgagent
 ```
 
-### 数据迁移
+### 数据备份与恢复
 
 ```bash
-# SQLite → MySQL
-# 1. 启动 MySQL 基础设施
-./scripts/docker-services.sh start
-
-# 2. 重新上传文档
-# 在 Admin 后台重新上传所有知识库文档
-
-# 3. 用户数据迁移
-# 需要手动迁移用户、会话等数据
-```
-
-### 数据备份和恢复
-
-```bash
-# SQLite 备份
-cp mgagent-backend/data/chat.db backup.db
-cp -r mgagent-backend/data/chroma/ chroma_backup/
-
 # MySQL 备份
 mysqldump -u root -p mgagent > backup.sql
 
 # MySQL 恢复
 mysql -u root -p mgagent < backup.sql
 
-# Docker 卷备份
+# Milvus 数据备份（MinIO 持久化层）
+docker run --rm -v mgagent_minio_data:/data -v $(pwd):/backup \
+  alpine tar czf /backup/minio.tar.gz /data
+
+# Milvus 恢复
+docker run --rm -v mgagent_minio_data:/data -v $(pwd):/backup \
+  alpine tar xzf /backup/minio.tar.gz -C /
+
+# Docker 卷备份（整体）
 docker run --rm -v mgagent_mysql_data:/data -v $(pwd):/backup \
   alpine tar czf /backup/mysql.tar.gz /data
 ```
@@ -378,23 +352,19 @@ ModuleNotFoundError: No module named 'xxx'
 # 停止所有服务
 ./scripts/deploy.sh down
 
-# 清理所有数据（SQLite 方案）
-rm -rf mgagent-backend/data/chroma
-rm -rf mgagent-backend/data/documents
-rm -f mgagent-backend/data/chat.db
-
-# 清理 Docker 数据卷（MySQL 方案）
+# 清理 Docker 数据卷
 docker compose -f docker-compose.infra.yml down -v
 
 # 重新启动
 ./scripts/deploy.sh up
+```
 
-# 快速重启
+### 快速重启
 
 ```bash
 # 本地开发
 ./scripts/stop-all.sh
-./scripts/start-all.sh sqlite
+./scripts/start-all.sh
 
 # Docker
 ./scripts/deploy.sh down

@@ -104,7 +104,6 @@ services:
     container_name: mgagent-backend
     restart: always
     environment:
-      - DATABASE_SCHEME=mysql
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_USER=${MYSQL_USER}
@@ -114,10 +113,12 @@ services:
       - MILVUS_PORT=19530
       - ADMIN_API_URL=http://mgagent-admin-backend:8001/admin/api
       - DEBUG=False
+      - HF_HOME=/root/.cache/huggingface
     ports:
       - "${CHAT_BACKEND_PORT:-8000}:8000"
     volumes:
       - backend_data:/app/data
+      - ${MGAGENT_HF_CACHE:-./.cache/huggingface}:/root/.cache/huggingface
     depends_on:
       mysql:
         condition: service_healthy
@@ -140,7 +141,6 @@ services:
     container_name: mgagent-admin-backend
     restart: always
     environment:
-      - DATABASE_SCHEME=mysql
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
       - MYSQL_USER=${MYSQL_USER}
@@ -149,10 +149,12 @@ services:
       - MILVUS_HOST=milvus
       - MILVUS_PORT=19530
       - DEBUG=False
+      - HF_HOME=/root/.cache/huggingface
     ports:
       - "${ADMIN_BACKEND_PORT:-8001}:8001"
     volumes:
       - admin_backend_data:/app/data
+      - ${MGAGENT_HF_CACHE:-./.cache/huggingface}:/root/.cache/huggingface
     depends_on:
       mysql:
         condition: service_healthy

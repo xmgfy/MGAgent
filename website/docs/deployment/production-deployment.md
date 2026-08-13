@@ -39,13 +39,13 @@ docker compose -f docker-compose.prod.yml up -d --build  # 启动应用层
 
 ### 为什么选择 MySQL + Milvus
 
-| 特性 | SQLite + ChromaDB | MySQL + Milvus |
-|------|-------------------|----------------|
-| 并发支持 | 单线程 | 高并发 |
-| 数据量 | < 10万条 | 百万级 |
-| 可靠性 | 无集群 | 主从/集群 |
-| 备份恢复 | 手动文件复制 | 原生工具 |
-| 监控能力 | 基础 | 完善 |
+生产环境采用 MySQL 8.0 作为关系数据库、Milvus 2.4 作为向量数据库、MinIO 作为对象存储的统一技术栈，具备以下优势：
+
+- **高并发支持**：MySQL 连接池可支撑数十到上百并发连接，满足企业级多用户场景
+- **大数据量承载**：Milvus 向量索引支持百万级甚至更高规模的知识库检索
+- **可靠性保障**：MySQL 主从复制、Milvus 集群部署、MinIO 分布式存储均可实现高可用
+- **备份恢复便捷**：`mysqldump` 原生支持 MySQL 备份，Docker 卷快照可快速恢复 Milvus 和 MinIO 数据
+- **完善的监控体系**：MySQL、Milvus、MinIO 各自提供健康检查端点和指标导出，便于接入 Prometheus / Grafana
 
 ## 生产环境配置
 

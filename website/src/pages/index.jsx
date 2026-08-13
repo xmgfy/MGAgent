@@ -65,7 +65,7 @@ function HomepageHeader() {
           </Heading>
           <p className={styles.heroSubtitle}>{siteConfig.tagline}</p>
           <p className={styles.heroDescription}>
-            基于 LangChain 构建的企业级智能体系统，支持双技术栈架构，适用于智能客服、知识问答、数据分析等场景
+            基于 LangChain 构建的企业级智能体系统，采用 MySQL + Milvus + MinIO 生产级架构，适用于智能客服、知识问答、数据分析等场景
           </p>
           <div className={styles.buttons}>
             <Link
@@ -100,7 +100,7 @@ const FeatureList = [
   },
   {
     title: '数据库查询',
-    description: '自然语言转 SQL，支持 MySQL、SQLite，自动生成和优化查询语句',
+    description: '自然语言转 SQL，支持 MySQL，自动生成和优化查询语句',
     gradient: 'linear-gradient(135deg, #cffafe 0%, #a5f3fc 100%)',
     icon: <DatabaseIcon />,
   },
@@ -143,8 +143,8 @@ const StatsSection = () => (
     <div className="container">
       <div className="row">
         <div className={clsx('col col--3', styles.statItem)}>
-          <div className={styles.statNumber}>2</div>
-          <div className={styles.statLabel}>技术栈方案</div>
+          <div className={styles.statNumber}>1</div>
+          <div className={styles.statLabel}>生产级架构</div>
         </div>
         <div className={clsx('col col--3', styles.statItem)}>
           <div className={styles.statNumber}>5+</div>

@@ -38,14 +38,28 @@ show_help() {
     echo "用法: $0 <命令>"
     echo ""
     echo "命令列表:"
-    echo "  up        启动所有服务（首次会构建镜像）"
-    echo "  down      停止所有服务"
-    echo "  restart   重启所有服务"
-    echo "  status    查看服务运行状态"
-    echo "  logs      查看服务日志"
-    echo "  build     重新构建应用镜像"
-    echo "  cleanup   清理所有容器和数据卷（不可恢复）"
-    echo "  help      显示帮助信息"
+    echo "  up                  启动所有服务（首次会构建镜像）"
+    echo "  down                停止所有服务"
+    echo "  restart             重启所有服务"
+    echo "  status              查看服务运行状态"
+    echo "  logs                查看服务日志"
+    echo "  build               重新构建应用镜像"
+    echo "  cleanup             清理所有容器和数据卷（不可恢复）"
+    echo "  download-models     下载本地 Embedding/Reranker 私有化模型"
+    echo "  help                显示帮助信息"
+    echo ""
+    echo -e "${CYAN}私有化部署模型:${NC}"
+    echo "  # 列出所有可下载的本地模型（含 Embedding + Reranker）"
+    echo "  ./scripts/deploy.sh download-models list"
+    echo ""
+    echo "  # 下载全部推荐模型（预缓存到 HF_CACHE_DIR）"
+    echo "  ./scripts/deploy.sh download-models all"
+    echo ""
+    echo "  # 只下载 Reranker 模型"
+    echo "  ./scripts/deploy.sh download-models reranker"
+    echo ""
+    echo "  # 下载指定 ID 的模型"
+    echo "  ./scripts/deploy.sh download-models model bge-reranker-v2-m3"
     echo ""
     echo -e "${CYAN}前置条件:${NC}"
     echo "  1. 已安装 Docker 和 Docker Compose"
@@ -59,7 +73,10 @@ show_help() {
     echo "  # 2. 修改生产环境配置（密码、域名等）"
     echo "  vim .env.production"
     echo ""
-    echo "  # 3. 启动服务"
+    echo "  # 3. (可选) 下载私有化模型后再启动"
+    echo "  ./scripts/deploy.sh download-models all"
+    echo ""
+    echo "  # 4. 启动服务"
     echo "  ./scripts/deploy.sh up"
 }
 
@@ -278,6 +295,76 @@ cleanup() {
     echo -e "${GREEN}✅ 清理完成${NC}"
 }
 
+# 下载本地私有化模型（Embedding / Reranker）
+download_local_models() {
+    local ACTION="${1:-all}"
+    local ARG2="${2:-}"
+
+    # 默认 HF 缓存目录（与 docker-compose 中 mgagent-backend/admin-backend 的 volume 对应）
+    local HF_CACHE_DIR="${MGAGENT_HF_CACHE:-$PROJECT_DIR/.cache/huggingface}"
+    mkdir -p "$HF_CACHE_DIR"
+
+    echo -e "${BLUE}========================================================${NC}"
+    echo -e "${BLUE}  MGAgent 私有化模型下载${NC}"
+    echo -e "${BLUE}========================================================${NC}"
+    echo -e "HF 缓存目录: ${YELLOW}$HF_CACHE_DIR${NC}"
+    echo ""
+
+    # 自动检测可用 Python
+    local PY_BIN=""
+    if [ -x "/opt/anaconda3/bin/python3" ]; then
+        PY_BIN="/opt/anaconda3/bin/python3"
+    elif command -v python3 >/dev/null 2>&1; then
+        PY_BIN="$(command -v python3)"
+    else
+        echo -e "${RED}❌ 未找到 python3${NC}"
+        exit 1
+    fi
+
+    # sentence-transformers 依赖检查
+    if ! "$PY_BIN" -c "import sentence_transformers" 2>/dev/null; then
+        echo -e "${YELLOW}⚠️  缺少 sentence-transformers，正在安装...${NC}"
+        "$PY_BIN" -m pip install sentence-transformers -q 2>&1 || {
+            echo -e "${RED}❌ sentence-transformers 安装失败${NC}"
+            exit 1
+        }
+        echo -e "${GREEN}✅ sentence-transformers 安装完成${NC}"
+    fi
+
+    local SCRIPT="$PROJECT_DIR/mgagent-admin-backend/scripts/download_local_models.py"
+
+    case "$ACTION" in
+        list)
+            "$PY_BIN" "$SCRIPT" --list
+            ;;
+        all)
+            echo -e "${YELLOW}🔄 正在下载全部 Embedding + Reranker 模型...${NC}"
+            "$PY_BIN" "$SCRIPT" --all --cache-dir "$HF_CACHE_DIR"
+            ;;
+        embedding|reranker)
+            echo -e "${YELLOW}🔄 正在下载所有 $ACTION 类型模型...${NC}"
+            "$PY_BIN" "$SCRIPT" --all --type "$ACTION" --cache-dir "$HF_CACHE_DIR"
+            ;;
+        model|models)
+            if [ -z "$ARG2" ]; then
+                echo -e "${RED}❌ 请指定模型 ID，如: $0 download-models model bge-reranker-v2-m3${NC}"
+                exit 1
+            fi
+            echo -e "${YELLOW}🔄 正在下载指定模型: $ARG2${NC}"
+            "$PY_BIN" "$SCRIPT" --model "$ARG2" --cache-dir "$HF_CACHE_DIR"
+            ;;
+        *)
+            echo -e "${RED}❌ 未知 download-models 动作: $ACTION${NC}"
+            echo "可用: list | all | embedding | reranker | model <ID>"
+            exit 1
+            ;;
+    esac
+
+    echo ""
+    echo -e "${GREEN}✅ 完成。缓存已保存到: $HF_CACHE_DIR${NC}"
+    echo "   Docker 容器启动时会自动挂载此目录，无需重复下载。"
+}
+
 # 主逻辑
 case "${1:-help}" in
     up)
@@ -300,6 +387,9 @@ case "${1:-help}" in
         ;;
     cleanup)
         cleanup
+        ;;
+    download-models)
+        download_local_models "${2:-all}" "${3:-}"
         ;;
     help|--help|-h)
         show_help

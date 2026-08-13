@@ -159,11 +159,11 @@ const Dashboard = () => {
               <CheckCircle size={20} className="text-green-500" />
             </div>
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
-              <span className="text-gray-700">向量数据库 (Chroma)</span>
+              <span className="text-gray-700">向量数据库 (Milvus)</span>
               <CheckCircle size={20} className="text-green-500" />
             </div>
             <div className="flex items-center justify-between p-3 bg-green-50 rounded-xl">
-              <span className="text-gray-700">存储数据库 (SQLite)</span>
+              <span className="text-gray-700">关系数据库 (MySQL)</span>
               <CheckCircle size={20} className="text-green-500" />
             </div>
           </div>

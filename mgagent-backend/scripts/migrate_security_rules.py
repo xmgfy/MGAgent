@@ -1,5 +1,5 @@
 """
-数据库迁移脚本 - 添加 security_rules 表（支持 MySQL 和 SQLite）
+数据库迁移脚本 - 添加 security_rules 表（MySQL）
 """
 import os
 import sys

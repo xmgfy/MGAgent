@@ -1,6 +1,7 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
 
+
 class Settings(BaseSettings):
     model_config = {
         "env_file": ".env",
@@ -8,18 +9,14 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
     
-    CHROMA_PERSIST_DIR: str = "data/chroma"
     DOCUMENT_DIR: str = "data/documents"
     
-    # MySQL 数据库配置
     DATABASE_URL: str = "mysql+pymysql://mgagent:mgagent_password_2024@localhost:3306/mgagent?charset=utf8mb4"
     
-    # Milvus 向量数据库配置
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION: str = "mgagent_knowledge"
     
-    # MinIO 对象存储配置（MySQL 模式使用）
     MINIO_HOST: str = "localhost"
     MINIO_PORT: int = 9000
     MINIO_ACCESS_KEY: str = "minioadmin"
@@ -38,9 +35,8 @@ settings = Settings()
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = BASE_DIR / "data"
 DOCUMENT_DIR = DATA_DIR / "documents"
-CHROMA_DIR = DATA_DIR / "chroma"
 
-for dir_path in [DATA_DIR, DOCUMENT_DIR, CHROMA_DIR]:
+for dir_path in [DATA_DIR, DOCUMENT_DIR]:
     dir_path.mkdir(parents=True, exist_ok=True)
 
 

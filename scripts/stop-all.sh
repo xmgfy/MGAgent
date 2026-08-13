@@ -229,6 +229,6 @@ echo ""
 if [ "$APP_ONLY" = true ]; then
     echo "启动应用请运行: ./scripts/start-all.sh app"
 else
-    echo "启动服务请运行: ./scripts/start-all.sh [sqlite|mysql|app]"
+    echo "启动服务请运行: ./scripts/start-all.sh [mysql|app]"
 fi
 echo ""

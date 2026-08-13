@@ -67,6 +67,93 @@ export interface DocumentInfo {
   storage_path?: string
 }
 
+export interface RetrieveTestChunk {
+  id: string
+  content_preview: string
+  content: string
+  distance: number
+  metadata: Record<string, any>
+}
+
+export interface RetrieveTestResponse {
+  query: string
+  knowledge_base: {
+    id: string
+    name: string
+    retrieve_limit: number
+    similarity_threshold: number | null
+    enable_hybrid: boolean
+    enable_rerank: boolean
+  }
+  embedding_model: string
+  threshold_applied: boolean
+  threshold_value: number | null
+  results_before_threshold: number
+  results_after_threshold: number
+  results: RetrieveTestChunk[]
+  timings_ms: {
+    embedding_load_ms?: number
+    query_embed_ms?: number
+    vector_search_ms?: number
+    total_ms?: number
+  }
+  hybrid_executed?: boolean
+  rerank_executed?: boolean
+  note?: string
+}
+
+export interface RetrievalLogEntry {
+  id: number
+  query: string
+  knowledge_base_id: string | null
+  kb_name: string | null
+  top_k: number
+  threshold_applied: boolean
+  threshold_value: number | null
+  results_count: number
+  rerank_applied: boolean
+  hybrid_applied: boolean
+  latency_ms: number | null
+  results_preview: string | null
+  created_at: string | null
+}
+
+export interface EvalDatasetItem {
+  id: number
+  query: string
+  name: string | null
+  note: string | null
+  expected_chunk_ids: string[]
+  expected_document_ids: string[]
+  created_at: string | null
+}
+
+export interface EvalRunResponse {
+  eval_result_id: number
+  knowledge_base: string
+  total_queries: number
+  hit_rate: { at_1: number; at_3: number; at_5: number; at_10: number }
+  mrr: { at_5: number; at_10: number }
+  latency_ms: number
+  config: Record<string, any>
+  details: Array<{ query: string; hit_at_5: boolean; hit_at_10: boolean; top3: string[] }>
+}
+
+export interface EvalResultEntry {
+  id: number
+  total_queries: number
+  hit_at_1: number
+  hit_at_5: number
+  hit_at_10: number
+  hit_rate_at_5: number
+  hit_rate_at_10: number
+  mrr_at_5: number
+  mrr_at_10: number
+  latency_ms: number
+  config: Record<string, any> | null
+  created_at: string | null
+}
+
 export interface VectorDBStats {
   total_chunks: number
   persist_directory: string
@@ -321,6 +408,68 @@ export interface PreviewResponse {
   truncated?: boolean
 }
 
+export interface KnowledgeBase {
+  id: string
+  name: string
+  description: string | null
+  tenant_id: string | null
+  vector_db_type: string
+  embedding_model_id: string | null
+  chunk_size: number
+  chunk_overlap: number
+  chunk_separator: string | null
+  retrieve_limit: number
+  similarity_threshold: number | null
+  enable_rerank: boolean
+  rerank_model_id: string | null
+  rerank_top_n: number
+  rerank_score_threshold: number | null
+  enable_hybrid: boolean
+  hybrid_alpha: number
+  is_active: boolean
+  document_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface KnowledgeBaseCreateInput {
+  name: string
+  description?: string
+  vector_db_type?: string
+  embedding_model_id?: string | null
+  chunk_size?: number
+  chunk_overlap?: number
+  chunk_separator?: string | null
+  retrieve_limit?: number
+  similarity_threshold?: number | null
+  enable_rerank?: boolean
+  rerank_model_id?: string | null
+  rerank_top_n?: number
+  rerank_score_threshold?: number | null
+  enable_hybrid?: boolean
+  hybrid_alpha?: number
+  is_active?: boolean
+}
+
+export interface KnowledgeBaseUpdateInput {
+  name?: string
+  description?: string
+  vector_db_type?: string
+  embedding_model_id?: string | null
+  chunk_size?: number
+  chunk_overlap?: number
+  chunk_separator?: string | null
+  retrieve_limit?: number
+  similarity_threshold?: number | null
+  enable_rerank?: boolean
+  rerank_model_id?: string | null
+  rerank_top_n?: number
+  rerank_score_threshold?: number | null
+  enable_hybrid?: boolean
+  hybrid_alpha?: number
+  is_active?: boolean
+}
+
 export interface Notification {
   id: string
   type: 'error' | 'warning' | 'info' | 'user_registration'
@@ -331,6 +480,33 @@ export interface Notification {
 }
 
 export const knowledgeBaseApi = {
+  // ---------- KnowledgeBase CRUD ----------
+  listKnowledgeBases: async (): Promise<KnowledgeBase[]> => {
+    const response = await api.get('/knowledge-base/list')
+    return response.data.items || []
+  },
+
+  getKnowledgeBase: async (kbId: string): Promise<KnowledgeBase> => {
+    const response = await api.get(`/knowledge-base/${kbId}`)
+    return response.data
+  },
+
+  createKnowledgeBase: async (data: KnowledgeBaseCreateInput): Promise<KnowledgeBase> => {
+    const response = await api.post('/knowledge-base', data)
+    return response.data
+  },
+
+  updateKnowledgeBase: async (kbId: string, data: KnowledgeBaseUpdateInput): Promise<KnowledgeBase> => {
+    const response = await api.put(`/knowledge-base/${kbId}`, data)
+    return response.data
+  },
+
+  deleteKnowledgeBase: async (kbId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/knowledge-base/${kbId}`)
+    return response.data
+  },
+
+  // ---------- Documents (scope optional) ----------
   getStats: async (): Promise<KnowledgeBaseStats> => {
     const response = await api.get('/knowledge-base/stats')
     return response.data
@@ -350,9 +526,16 @@ export const knowledgeBaseApi = {
     return response.data
   },
 
-  upload: async (file: File, onProgress?: (percent: number) => void): Promise<UploadResponse> => {
+  upload: async (
+    file: File,
+    knowledgeBaseId?: string,
+    onProgress?: (percent: number) => void
+  ): Promise<UploadResponse> => {
     const formData = new FormData()
     formData.append('file', file)
+    if (knowledgeBaseId) {
+      formData.append('knowledge_base_id', knowledgeBaseId)
+    }
     const response = await api.post('/knowledge-base/upload', formData, {
       headers: { 'Content-Type': 'multipart/form-data' },
       onUploadProgress: (progressEvent) => {
@@ -391,6 +574,58 @@ export const knowledgeBaseApi = {
 
   preview: async (documentId: string): Promise<PreviewResponse> => {
     const response = await api.get(`/knowledge-base/documents/${documentId}/preview`)
+    return response.data
+  },
+
+  retrieveTest: async (
+    kbId: string,
+    query: string,
+    topK: number = 5,
+    similarityThreshold?: number
+  ): Promise<RetrieveTestResponse> => {
+    const response = await api.post(`/knowledge-base/${kbId}/retrieve-test`, {
+      query,
+      top_k: topK,
+      similarity_threshold: similarityThreshold ?? null
+    })
+    return response.data
+  },
+
+  fetchRetrievalLogs: async (
+    kbId?: string,
+    limit: number = 50
+  ): Promise<RetrievalLogEntry[]> => {
+    const params: Record<string, any> = { limit }
+    if (kbId) params.knowledge_base_id = kbId
+    const response = await api.get('/knowledge-base/retrieve-logs', { params })
+    return response.data
+  },
+
+  fetchEvalDataset: async (kbId: string): Promise<EvalDatasetItem[]> => {
+    const response = await api.get(`/knowledge-base/${kbId}/eval-dataset`)
+    return response.data
+  },
+
+  addEvalDatasetItem: async (
+    kbId: string,
+    item: { query: string; expected_chunk_ids?: string[]; expected_document_ids?: string[]; name?: string; note?: string }
+  ): Promise<{ id: number; message: string }> => {
+    const response = await api.post(`/knowledge-base/${kbId}/eval-dataset`, item)
+    return response.data
+  },
+
+  deleteEvalDatasetItem: async (itemId: number): Promise<{ message: string }> => {
+    const response = await api.delete(`/knowledge-base/eval-dataset/${itemId}`)
+    return response.data
+  },
+
+  runEval: async (kbId: string): Promise<EvalRunResponse> => {
+    const response = await api.post(`/knowledge-base/${kbId}/eval`)
+    return response.data
+  },
+
+  fetchEvalResults: async (kbId: string, limit: number = 20): Promise<EvalResultEntry[]> => {
+    const response = await api.get(`/knowledge-base/${kbId}/eval-results`, { params: { limit } })
     return response.data
   },
 }

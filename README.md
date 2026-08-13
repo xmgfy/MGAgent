@@ -4,7 +4,7 @@
 
 ### 企业级智能体系统
 
-基于 LangChain + FastAPI + React 构建的企业级智能体解决方案，支持双技术栈架构、多租户管理、RAG 知识库检索和动态模型配置
+基于 LangChain + FastAPI + React 构建的企业级智能体解决方案，具备企业级 RAG（Hybrid + Rerank + BM25 + 离线评估）、多租户管理、自然语言数据库查询和动态模型配置
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.10+-3776AB.svg)](https://python.org)
@@ -20,12 +20,13 @@
 
 ## 项目亮点
 
-- **双技术栈架构** — 独创统一接口抽象，开发用 SQLite+ChromaDB，生产用 MySQL+Milvus，零代码切换
-- **动态模型配置** — 所有 LLM 配置存储于数据库，Admin 端可视化管理，无需重启应用
-- **RAG 知识库** — 向量检索增强，支持文档上传、自动分片、语义召回
-- **多工具调用** — LangChain Agent 插件化工具体系，支持 API、计算器、数据库查询等
+- **企业级 RAG** — 多知识库隔离、Hybrid 向量+BM25 RRF 融合、Rerank 重排、检索调试面板、离线评估 (HitRate@k / MRR)
+- **动态模型配置** — 所有 LLM / Embedding / Rerank 配置存储于数据库，Admin 端可视化管理，无需重启应用
+- **Hybrid 混合检索** — 向量语义检索 + BM25 关键词检索，通过 RRF 融合，`hybrid_alpha` 权重可调
+- **可配置分块** — 每个知识库独立的 chunk_size / chunk_overlap / chunk_separator
+- **多工具调用** — LangChain Agent 插件化工具体系，支持 API、计算器、SQL 查询等
 - **多租户隔离** — 多用户、多知识库、多会话的完整隔离机制
-- **一键部署** — Docker Compose 分层架构，脚本化部署，开箱即用
+- **一键部署** — Docker Compose 分层架构，MySQL + Milvus + MinIO，脚本化部署
 
 ## 架构设计
 
@@ -44,35 +45,35 @@ flowchart TB
     end
 
     subgraph S3["数据层 Data Layer"]
-        E[("SQLite / MySQL<br/>关系数据库")]
-        F[("ChromaDB / Milvus<br/>向量数据库")]
+        E[("MySQL 8.0<br/>关系数据库")]
+        F[("Milvus 2.4<br/>向量数据库")]
         G[("etcd & MinIO<br/>Milvus 依赖")]
     end
 
     subgraph S4["AI能力层 AI Layer"]
-        I[LangChain Agent]
-        J[RAG Retriever]
-        K[LLM Models]
-        L["Tools<br/>计算器 / 数据库查询"]
+        H[LangChain Agent]
+        I["RAG Pipeline<br/>Hybrid + Rerank"]
+        J[LLM Models]
+        K["Tools<br/>计算器 / 数据库查询"]
     end
 
     subgraph S5["配置层 Config Layer"]
-        M["模型配置表<br/>model_configs"]
+        L["模型配置表<br/>model_configs"]
     end
 
     A --> C
     B --> D
     C --> E
     C --> F
-    C --> I
+    C --> H
     D --> E
-    I --> J
-    I --> K
-    I --> L
-    J --> F
+    H --> I
+    H --> J
+    H --> K
+    I --> F
     F --> G
-    C --> M
-    D --> M
+    C --> L
+    D --> L
 
     classDef userLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
     classDef apiLayer fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
@@ -87,29 +88,38 @@ flowchart TB
     class S5 configLayer
 ```
 
-### 双技术栈架构
+### RAG 流水线
 
-| 特性 | 方案1：SQLite + ChromaDB | 方案2：MySQL + Milvus |
-|------|--------------------------|------------------------|
-| 关系数据库 | SQLite 3.x（文件型，零配置） | MySQL 8.0（高性能，支持并发） |
-| 向量数据库 | ChromaDB 0.5+（轻量嵌入式） | Milvus 2.4（分布式，亿级向量） |
-| 适用场景 | 本地开发调试、单机部署 | 生产环境、大规模数据、高并发 |
-| 外部依赖 | 无 | MySQL、Milvus、etcd、MinIO |
-| 环境变量 | `.env.sqlite` | `.env.mysql` |
-| Compose 文件 | 无需 Docker | `docker-compose.infra.yml` |
-
-> 两套方案下，Chat 后端和 Admin 后端连接的是**同一套数据库和向量数据库**，确保数据一致性。
+```mermaid
+flowchart LR
+    A[用户提问] --> B["Query Embedding"]
+    B --> C["向量检索<br/>Milvus 相似度"]
+    B --> D["BM25 关键词检索"]
+    C --> E["RRF 融合"]
+    D --> E
+    E --> F{启用 Rerank?}
+    F -->|是| G["Rerank 重排"]
+    F -->|否| H[阈值过滤]
+    G --> H
+    H --> I["Top-K"]
+```
 
 ## 核心特性
 
 | 特性 | 说明 |
 |------|------|
 | **智能对话** | 基于大模型的多轮对话，支持上下文理解、意图识别、流式响应 |
-| **知识库检索** | RAG 向量检索增强，支持 PDF/Word/TXT 文档上传与自动分片 |
-| **数据库查询** | 自然语言转 SQL，支持安全沙箱执行和数据可视化 |
-| **多工具调用** | LangChain Agent 插件化工具，支持 API 调用、计算器、搜索等 |
+| **多知识库隔离** | 每个知识库独立的分块、Embedding、检索、Rerank 配置，互不干扰 |
+| **Hybrid 混合检索** | 向量 + BM25 RRF 融合，`hybrid_alpha` 权重可调，兼顾语义与关键词召回 |
+| **Rerank 重排** | 支持 SiliconFlow / Cohere / Jina / OpenAI 兼容接口，按知识库启用 |
+| **可配置分块** | chunk_size / chunk_overlap / chunk_separator 按知识库设置 |
+| **检索调试** | retrieve-test 面板、RetrievalLog 记录、耗时分解、Hybrid/Rerank 执行标志 |
+| **离线评估** | EvalDataset + EvalResult，HitRate@k / MRR 指标 |
+| **扩展 Loader** | PDF / Word / TXT / Markdown / Excel / CSV / JSON / 代码文件 |
+| **语义分块** | Markdown heading 分块、结构化文档分块 |
+| **数据库查询** | 自然语言转 SQL，MySQL 沙箱执行 |
 | **多租户管理** | 多用户、多知识库、多会话完整隔离，RBAC 权限控制 |
-| **模型配置管理** | Admin 端统一管理 LLM 配置，数据库存储，动态生效，无需重启 |
+| **模型配置管理** | Admin 端统一管理 LLM / Embedding / Rerank 配置，数据库存储，动态生效 |
 
 ## 技术栈
 
@@ -123,8 +133,8 @@ flowchart TB
 | SQLAlchemy | 2.0+ | ORM |
 | Uvicorn | 0.20+ | ASGI 服务器 |
 | PyJWT | 2.8+ | JWT 认证 |
-| ChromaDB | 0.5+ | 轻量向量数据库 |
-| PyMilvus | 2.4+ | 分布式向量数据库客户端 |
+| bcrypt | 4.0+ | 密码加密 |
+| PyMilvus | 2.4+ | Milvus 向量数据库客户端 |
 
 ### 前端
 
@@ -138,58 +148,76 @@ flowchart TB
 | Axios | 1.6+ | HTTP 客户端 |
 | Lucide React | 0.314+ | 图标库 |
 
+### 基础设施
+
+| 组件 | 版本 | 用途 |
+|------|------|------|
+| MySQL | 8.0 | 关系数据库 |
+| Milvus | 2.4 | 向量数据库 |
+| MinIO | latest | Milvus 对象存储 + 文档存储 |
+| etcd | v3.5.5 | Milvus 元数据存储 |
+| Attu | v2.4 | Milvus 管理界面 |
+
 ## 快速开始
 
-### 方式一：本地开发（SQLite 方案，推荐）
+### 方式一：Docker 一键部署（推荐）
 
 ```bash
 # 1. 克隆项目
 git clone https://github.com/xmgfy/MGAgent.git
 cd MGAgent
 
-# 2. 一键初始化环境
-./scripts/init.sh
+# 2. 配置
+cp .env.production.example .env.production
 
-# 3. 启动所有服务（SQLite 模式）
-./scripts/start-all.sh sqlite
+# 3. 一键启动（MySQL + Milvus + 应用层）
+chmod +x scripts/deploy.sh
+./scripts/deploy.sh up
 
-# 4. 访问应用
-#   Chat 前端:  http://localhost:5173
-#   Admin 前端: http://localhost:5174
+# 4. 访问
+#   Chat 前端:  http://localhost:3000
+#   Admin 前端: http://localhost:3001
 #   Chat API:   http://localhost:8000/docs
 #   Admin API:  http://localhost:8001/docs
+#   Attu:       http://localhost:8003
 ```
 
-### 方式二：本地开发（MySQL 方案）
+### 方式二：本地开发
 
 ```bash
 # 1. 克隆项目
 git clone https://github.com/xmgfy/MGAgent.git
 cd MGAgent
 
-# 2. 一键初始化环境
-./scripts/init.sh
-
-# 3. 启动 Docker 基础设施（MySQL + Milvus）
+# 2. 启动 Docker 基础设施（MySQL + Milvus + etcd + MinIO + Attu）
+chmod +x scripts/*.sh
 ./scripts/docker-services.sh start
 
-# 4. 启动所有服务（MySQL 模式）
-./scripts/start-all.sh mysql
+# 3. 初始化并启动应用
+./scripts/init.sh
+./scripts/start-all.sh
 
-# 5. 访问应用
+# 4. 访问
 #   Chat 前端:  http://localhost:5173
 #   Admin 前端: http://localhost:5174
+```
+
+### 默认账号
+
+```
+管理员: admin / admin123
 ```
 
 ## 脚本说明
 
 | 脚本 | 用途 |
 |------|------|
-| `scripts/init.sh` | 项目初始化，安装依赖、创建目录、设置权限 |
-| `scripts/start-all.sh` | 启动所有服务，支持 `sqlite` / `mysql` 模式 |
-| `scripts/stop-all.sh` | 停止所有服务 |
-| `scripts/status.sh` | 查看所有服务运行状态 |
-| `scripts/docker-services.sh` | Docker 基础设施服务管理（MySQL + Milvus） |
+| `scripts/init.sh` | 项目初始化，安装依赖、创建目录 |
+| `scripts/start-all.sh` | 启动本地开发服务（Chat + Admin 后端、Chat + Admin 前端） |
+| `scripts/stop-all.sh` | 停止所有本地服务 |
+| `scripts/status.sh` | 检查服务运行状态 |
+| `scripts/deploy.sh` | 一键生产部署（MySQL + Milvus + 应用层） |
+| `scripts/docker-services.sh` | MySQL + Milvus + etcd + MinIO 基础设施管理 |
 
 > 详细的脚本使用说明请参考 [脚本使用文档](https://xmgfy.github.io/MGAgent/docs/development/scripts)
 
@@ -199,29 +227,19 @@ cd MGAgent
 MGAgent/
 ├── mgagent-backend/              # Chat 后端服务 (FastAPI :8000)
 │   ├── app/
-│   │   ├── api/                  # API 路由模块
-│   │   ├── core/                 # 核心配置与工厂模式
-│   │   ├── exceptions/           # 自定义异常体系
-│   │   ├── models/               # 数据模型
-│   │   ├── schemas/              # Pydantic 请求/响应模型
-│   │   ├── services/             # 业务逻辑层
-│   │   └── agent/                # LangChain Agent 与工具
-│   ├── .env.sqlite               # SQLite 模式配置
-│   ├── .env.mysql                # MySQL 模式配置
+│   │   ├── api/                   # API 路由模块
+│   │   ├── rag/                   # RAG 模块（Hybrid + Rerank + BM25）
+│   │   ├── db/                    # MySQL 数据库模块
+│   │   ├── config/                # 统一配置（MySQL / Milvus / MinIO）
+│   │   ├── tools/                 # Agent 工具（计算器、SQL 查询）
+│   │   └── ...
 │   └── requirements.txt
-├── mgagent-admin-backend/        # Admin 后端服务 (FastAPI :8001)
-│   ├── app/
-│   ├── .env.sqlite               # SQLite 模式配置
-│   ├── .env.mysql                # MySQL 模式配置
-│   └── requirements.txt
-├── mgagent-frontend/             # Chat 前端 (React :5173)
-│   └── src/
-├── mgagent-admin-frontend/       # Admin 前端 (React :5174)
-│   └── src/
-├── docker-compose.infra.yml      # MySQL + Milvus 基础设施
-├── scripts/                      # 工具脚本
-├── website/                      # Docusaurus 在线文档站点
-├── docs/                         # 项目文档
+├── mgagent-admin-backend/         # Admin 后端服务 (FastAPI :8001)
+├── mgagent-frontend/              # Chat 前端 (React :5173)
+├── mgagent-admin-frontend/        # Admin 前端 (React :5174)
+├── docker-compose.infra.yml       # MySQL + Milvus 基础设施
+├── docker-compose.prod.yml        # 生产应用层
+├── scripts/                       # 工具脚本
 └── README.md
 ```
 
@@ -235,23 +253,12 @@ MGAgent/
 |------|------|
 | [快速开始](https://xmgfy.github.io/MGAgent/docs/getting-started/quick-start) | 环境准备与项目启动 |
 | [架构概述](https://xmgfy.github.io/MGAgent/docs/architecture/overview) | 系统架构设计与模块划分 |
-| [双技术栈架构](https://xmgfy.github.io/MGAgent/docs/architecture/dual-stack) | SQLite/MySQL 切换机制 |
+| [RAG 架构](https://xmgfy.github.io/MGAgent/docs/architecture/rag) | 企业级 RAG 流水线详解 |
+| [数据库设计](https://xmgfy.github.io/MGAgent/docs/architecture/database) | MySQL 表结构与 Milvus 集合设计 |
 | [模型配置](https://xmgfy.github.io/MGAgent/docs/architecture/model-config) | 动态模型配置管理 |
 | [本地开发](https://xmgfy.github.io/MGAgent/docs/deployment/local-development) | 本地开发环境搭建 |
-| [Docker 部署](https://xmgfy.github.io/MGAgent/docs/deployment/docker-deployment) | Docker 容器化部署 |
-| [MySQL 部署](https://xmgfy.github.io/MGAgent/docs/deployment/mysql-deployment) | MySQL + Milvus 生产部署 |
-| [更新日志](https://xmgfy.github.io/MGAgent/blog) | 按月发布的项目更新记录 |
-
-## 环境变量
-
-不同模式使用不同的环境配置文件：
-
-- **SQLite 模式**：`.env.sqlite`
-- **MySQL 模式**：`.env.mysql`
-
-`start-all.sh` 会根据启动模式自动复制对应的配置文件为 `.env`。
-
-> 大模型相关配置已**全部迁移至数据库**，通过 Admin 端管理，不再使用本地静态配置。
+| [Docker 部署](https://xmgfy.github.io/MGAgent/docs/deployment/docker-deployment) | Docker Compose 部署指南 |
+| [生产部署](https://xmgfy.github.io/MGAgent/docs/deployment/production-deployment) | 生产环境优化与安全配置 |
 
 ## 许可证
 

@@ -1,42 +1,24 @@
 ---
 title: 配置说明
-description: MGAgent 系统配置详解，包括环境变量、模型配置和技术栈选择
+description: MGAgent 系统配置详解，包括环境变量、模型配置和技术栈说明
 slug: /getting-started/configuration
 ---
 
 # 配置说明
 
-## 技术栈选择
+## 技术栈说明
 
-MGAgent 支持两套技术栈方案，通过不同的环境配置文件切换：
+MGAgent 统一使用 **MySQL + Milvus + MinIO** 技术栈，不再支持 SQLite / ChromaDB 方案。
 
-### 方案对比
-
-| 特性 | SQLite + ChromaDB | MySQL + Milvus |
-|------|-------------------|----------------|
-| 配置文件 | `.env.sqlite` | `.env.mysql` |
-| 关系数据库 | SQLite 3.x | MySQL 8.0 |
-| 向量数据库 | ChromaDB 0.5+ | Milvus 2.4 |
-| 适用场景 | 单机开发调试 | 生产级部署 |
-| 部署复杂度 | 简单 | 中等 |
-| Compose 文件 | 无需 Docker | `docker-compose.prod.yml` |
-
-### 切换方式
-
-#### 本地开发（推荐）
+- **关系数据库**：MySQL 8.0
+- **向量数据库**：Milvus 2.4
+- **文件存储**：MinIO
 
 ```bash
-# SQLite 方案（默认，无需 Docker）
-./scripts/start-all.sh sqlite
-
-# MySQL 方案（需先启动基础设施）
+# 本地开发（需先启动 Docker 基础设施）
 ./scripts/docker-services.sh start
-./scripts/start-all.sh mysql
-```
+./scripts/start-all.sh
 
-#### 生产部署
-
-```bash
 # 生产环境一键部署
 ./scripts/deploy.sh up
 
@@ -134,10 +116,8 @@ EOF
 
 ## 数据库配置
 
-### MySQL 方案
-
 ```bash
-# 编辑 .env.mysql 或 .env.production
+# 编辑 .env（本地开发）或 .env.production（生产环境）
 MYSQL_HOST=localhost
 MYSQL_PORT=3306
 MYSQL_USER=mgagent
@@ -145,18 +125,10 @@ MYSQL_PASSWORD=your_password
 MYSQL_DATABASE=mgagent
 ```
 
-### SQLite 方案
-
-```bash
-# 编辑 .env.sqlite
-SQLITE_DB_PATH=data/chat.db
-CHROMA_PERSIST_DIR=data/chroma
-```
-
 ## 调试配置
 
 ```bash
-# 启用调试模式（在 .env.sqlite 中）
+# 启用调试模式（在 .env 中）
 DEBUG=True
 
 # 设置 API 地址

@@ -87,12 +87,11 @@ chmod +x scripts/init.sh
 ### 2. 启动服务
 
 ```bash
-# SQLite 模式（默认，无需 Docker）
-./scripts/start-all.sh sqlite
-
-# MySQL 模式（需先启动 Docker 基础设施）
+# 启动 Docker 基础设施（MySQL + Milvus + MinIO）
 ./scripts/docker-services.sh start
-./scripts/start-all.sh mysql
+
+# 启动本地开发服务
+./scripts/start-all.sh
 
 # 停止服务
 ./scripts/stop-all.sh
@@ -108,13 +107,13 @@ chmod +x scripts/init.sh
 ```bash
 # Chat 后端 (端口: 8000)
 cd mgagent-backend
-# 使用 .env.sqlite 或 .env.mysql 配置
-source .env.sqlite
+# 使用 .env 配置
+source .env
 uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 
 # Admin 后端 (端口: 8001)
 cd mgagent-admin-backend
-source .env.sqlite
+source .env
 uvicorn app.main:app --host 0.0.0.0 --port 8001 --reload
 
 # Chat 前端 (端口: 5173)

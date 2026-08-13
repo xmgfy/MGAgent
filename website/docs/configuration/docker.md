@@ -8,14 +8,12 @@ slug: /configuration/docker
 
 ## 概述
 
-MGAgent 使用 Docker Compose 进行容器化部署，支持 SQLite 和 MySQL 两种方案。
-
-## Compose 文件说明
+MGAgent 使用 Docker Compose 分层部署，基础设施和应用层分离管理：
 
 | 文件 | 用途 | 包含服务 |
 |------|------|---------|
-| `docker-compose.prod.yml` | 生产环境全栈 | 4 个应用服务 |
-| `docker-compose.infra.yml` | MySQL + Milvus 基础设施 | 5 个基础设施服务 |
+| `docker-compose.infra.yml` | 基础设施 | MySQL、Milvus、etcd、MinIO、Attu |
+| `docker-compose.prod.yml` | 应用层 | Chat 后端、Admin 后端、Chat 前端、Admin 前端 |
 
 ## Docker 镜像源配置
 
@@ -51,12 +49,6 @@ EOF
 sudo systemctl restart docker
 ```
 
-### 检查镜像源
-
-```bash
-./scripts/docker-services.sh check-mirror
-```
-
 ### 预热镜像
 
 ```bash
@@ -79,39 +71,16 @@ sudo systemctl restart docker
 
 ## 网络配置
 
-### 网络定义
-
-所有服务通过 `mgagent-network` 网络互联：
+所有服务通过 `mgagent-network` 网络互联。`docker-compose.prod.yml` 使用外部网络，因为基础设施和应用层分属不同的 Compose 文件：
 
 ```yaml
-networks:
-  mgagent-network:
-    driver: bridge
-    name: mgagent-network
-```
-
-### SQLite 方案
-
-`docker-compose.prod.yml` 内部自动创建网络：
-
-```yaml
-networks:
-  mgagent-network:
-    driver: bridge
-```
-
-### MySQL 方案
-
-MySQL 方案使用外部网络，因为基础设施和应用层分属不同的 Compose 文件：
-
-```yaml
-# docker-compose.infra.yml
+# docker-compose.infra.yml（创建网络）
 networks:
   mgagent-network:
     driver: bridge
     name: mgagent-network
 
-# docker-compose.prod.yml
+# docker-compose.prod.yml（加入已存在的网络）
 networks:
   mgagent-network:
     external: true
@@ -119,25 +88,12 @@ networks:
 ```
 
 :::tip 注意
-MySQL 方案必须先启动基础设施（`docker-compose.infra.yml`），网络会被自动创建。然后应用层才能加入该网络。
+必须先启动基础设施（`docker-compose.infra.yml`），网络会被自动创建。然后应用层才能加入该网络。
 :::
 
 ## 数据卷配置
 
-### SQLite 方案
-
-SQLite 方案使用本地目录挂载：
-
-```yaml
-services:
-  mgagent-backend:
-    volumes:
-      - ./mgagent-backend/data:/app/data
-```
-
-### MySQL 方案
-
-MySQL 方案使用 Docker 命名卷：
+使用 Docker 命名卷实现数据持久化：
 
 ```yaml
 volumes:
@@ -171,24 +127,9 @@ docker run --rm -v mgagent_mysql_data:/data -v $(pwd):/backup \
 
 ## 服务依赖
 
-### SQLite 方案
+### 基础设施内部依赖
 
 ```yaml
-services:
-  mgagent-frontend:
-    depends_on:
-      - mgagent-backend
-
-  mgagent-admin-frontend:
-    depends_on:
-      mgagent-admin-backend:
-        condition: service_healthy
-```
-
-### MySQL 方案
-
-```yaml
-# 基础设施内部依赖
 services:
   milvus:
     depends_on:
@@ -198,8 +139,12 @@ services:
   attu:
     depends_on:
       - milvus
+```
 
-# 应用层依赖
+### 应用层依赖
+
+```yaml
+services:
   mgagent-frontend:
     depends_on:
       - mgagent-backend
@@ -277,6 +222,17 @@ services:
 
 ## 日志配置
 
+```bash
+# 基础设施日志
+docker compose -f docker-compose.infra.yml logs -f --tail=50
+
+# 应用层日志
+docker compose -f docker-compose.prod.yml logs -f --tail=50
+
+# 单个服务日志
+docker logs mgagent-backend --tail=100 -f
+```
+
 ### Docker 日志轮转
 
 在 `/etc/docker/daemon.json` 中配置：
@@ -291,89 +247,8 @@ services:
 }
 ```
 
-### 查看服务日志
-
-```bash
-# SQLite 方案
-docker compose -f docker-compose.prod.yml logs -f --tail=100
-
-# MySQL 基础设施
-docker compose -f docker-compose.infra.yml logs -f --tail=50
-
-# MySQL 应用层
-docker compose -f docker-compose.prod.yml logs -f --tail=50
-
-# 单个服务日志
-docker logs mgagent-backend --tail=100 -f
-```
-
-## 常用 Docker 命令
-
-```bash
-# 启动服务
-docker compose -f docker-compose.prod.yml up -d
-
-# 构建并启动
-docker compose -f docker-compose.prod.yml up -d --build
-
-# 停止服务
-docker compose -f docker-compose.prod.yml down
-
-# 重启服务
-docker compose -f docker-compose.prod.yml restart
-
-# 进入容器
-docker exec -it mgagent-backend bash
-
-# 查看资源使用
-docker stats
-
-# 清理所有容器（保留数据卷）
-docker compose -f docker-compose.prod.yml down
-
-# 清理所有容器和数据卷
-docker compose -f docker-compose.prod.yml down -v
-
-# 查看容器状态
-docker compose -f docker-compose.prod.yml ps
-```
-
-## 常见问题
-
-### 端口冲突
-
-```bash
-# 查看端口占用
-lsof -i :3000 :3001 :8000 :8001
-
-# 修改 Compose 文件中的端口映射
-ports:
-  - "8000:8000"  # 改为 "8080:8000"
-```
-
-### 镜像拉取慢
-
-```bash
-# 使用国内镜像源
-./scripts/docker-services.sh setup-mirror
-
-# 预热镜像
-./scripts/docker-services.sh preload
-```
-
-### 容器无法通信
-
-```bash
-# 检查网络
-docker network inspect mgagent-network
-
-# 重新创建网络
-docker network rm mgagent-network
-docker compose -f docker-compose.infra.yml up -d
-```
-
 ## 相关文档
 
 - [Docker 部署](/deployment/docker-deployment)
-- [MySQL 方案部署](/deployment/mysql-deployment)
+- [生产部署](/deployment/production-deployment)
 - [环境变量配置](/configuration/environment-variables)

@@ -188,25 +188,6 @@ ADMIN_FRONTEND_PORT=3001
 EOF
 ```
 
-## 数据迁移
-
-### 从 SQLite 迁移到 MySQL
-
-```bash
-# 1. 启动 MySQL 基础设施
-./scripts/docker-services.sh start
-
-# 2. 启动应用层
-./scripts/deploy.sh up
-
-# 3. 在 Admin 后台重新上传知识库文档
-# （SQLite 的 ChromaDB 数据需要重新导入到 Milvus）
-```
-
-:::tip 注意
-由于向量数据库的特殊性（ChromaDB 和 Milvus 的数据格式不兼容），知识库数据需要通过 Admin 后台重新上传。
-:::
-
 ## 常见问题
 
 ### 基础设施启动慢
@@ -232,7 +213,7 @@ docker logs mgagent-minio --tail=50
 
 ## 相关文档
 
-- [双技术栈架构](/architecture/dual-stack)
+- [技术栈架构](/architecture/dual-stack)
 - [Docker 部署](/deployment/docker-deployment)
 - [生产部署](/deployment/production-deployment)
 - [常见问题](/troubleshooting/common-issues)

@@ -1,30 +1,16 @@
 ---
-title: 双技术栈架构
-description: MGAgent 双技术栈架构设计，SQLite+ChromaDB 与 MySQL+Milvus 的切换机制
+title: 技术栈架构
+description: MGAgent 技术栈选型说明，MySQL + Milvus + MinIO 的统一架构
 slug: /architecture/dual-stack
 ---
 
-# 双技术栈架构
+# 技术栈架构
 
 :::info 概述
-MGAgent 独创双技术栈架构，通过统一接口抽象和工厂模式，实现 SQLite+ChromaDB（开发方案）和 MySQL+Milvus（生产方案）的无缝切换。
+MGAgent 统一采用 **MySQL + Milvus + MinIO** 技术栈，一套方案覆盖本地开发和生产部署，简化运维和数据迁移。
 :::
 
-## 方案对比
-
-| 特性 | SQLite + ChromaDB | MySQL + Milvus |
-|------|-------------------|----------------|
-| 关系数据库 | SQLite 3.x | MySQL 8.0 |
-| 向量数据库 | ChromaDB 0.5+ | Milvus 2.4 |
-| 适用场景 | 轻量级单机部署，开发调试 | 高性能生产部署，大规模数据 |
-| 部署复杂度 | 简单（无需外部依赖） | 中等（依赖 MySQL、Milvus 等） |
-| 性能 | 单机性能，适合小规模数据 | 高并发，支持大数据量 |
-| Compose 文件 | 无需 Docker | `docker-compose.prod.yml` |
-| 环境变量 | `.env.sqlite` | `.env.mysql` |
-
-## 架构示意图
-
-### 方案1：SQLite + ChromaDB（轻量级单机部署）
+## 架构图
 
 ```mermaid
 flowchart TB
@@ -34,210 +20,171 @@ flowchart TB
     end
 
     subgraph L2["存储层 Storage Layer"]
-        B1[("SQLite<br/>关系数据库")]
-        C1[("ChromaDB<br/>向量数据库")]
+        B1[("MySQL 8.0<br/>关系数据库")]
+        C1[("Milvus 2.4<br/>向量数据库")]
+    end
+
+    subgraph L3["依赖层 Dependencies"]
+        D1[("etcd")]
+        E1[("MinIO")]
     end
 
     A1 --> B1
     A1 --> C1
     A2 --> B1
     A2 --> C1
-
-    classDef appLayer fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
-    classDef storageLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
-
-    class L1 appLayer
-    class L2 storageLayer
-```
-
-### 方案2：MySQL + Milvus（高性能生产部署）
-
-```mermaid
-flowchart TB
-    subgraph L3["应用层 Application Layer"]
-        D1[mgagent-backend]
-        D2[mgagent-admin-backend]
-    end
-
-    subgraph L4["存储层 Storage Layer"]
-        E1[("MySQL 8.0<br/>关系数据库")]
-        F1[("Milvus 2.4<br/>向量数据库")]
-    end
-
-    subgraph L5["依赖层 Dependencies"]
-        G[("etcd")]
-        H[("MinIO")]
-    end
-
-    D1 --> E1
-    D1 --> F1
-    D2 --> E1
-    D2 --> F1
-    E1 --> G
-    F1 --> H
+    C1 --> D1
+    C1 --> E1
 
     classDef appLayer fill:#eff6ff,stroke:#3b82f6,stroke-width:2px
     classDef storageLayer fill:#f0fdf4,stroke:#22c55e,stroke-width:2px
     classDef dependencyLayer fill:#fef3c7,stroke:#f59e0b,stroke-width:2px
 
-    class L3 appLayer
-    class L4 storageLayer
-    class L5 dependencyLayer
+    class L1 appLayer
+    class L2 storageLayer
+    class L3 dependencyLayer
 ```
 
-## 切换机制
+## 技术选型说明
 
-### 1. 环境变量配置
+| 组件 | 版本 | 说明 |
+|------|------|------|
+| MySQL | 8.0 | 企业级关系数据库，支持高并发、事务、完整 SQL 特性 |
+| Milvus | 2.4 | 高性能向量数据库，支持亿级向量检索、IVF_FLAT / HNSW 索引 |
+| etcd | v3.5.5 | Milvus 元数据存储（依赖） |
+| MinIO | latest | Milvus 对象存储（依赖），同时作为文档存储 |
 
-通过复制不同的环境配置文件来选择技术栈：
+## 代码层面的统一接口
 
-```bash
-# 方案1：SQLite + ChromaDB（默认）
-cp .env.sqlite .env
+### 数据库工厂
 
-# 方案2：MySQL + Milvus
-cp .env.mysql .env
-```
-
-### 2. 代码层面切换
-
-系统通过工厂模式实现动态切换：
-
-#### 数据库工厂
-
-`app/db/database.py` 根据 `DATABASE_SCHEME` 创建对应的数据库引擎：
+`app/db/database.py` 直接创建 MySQL 引擎：
 
 ```python
-from app.config.config import is_mysql_scheme, is_sqlite_scheme
+from app.config.config import get_database_url
+
+def _create_mysql_engine():
+    return create_engine(
+        get_database_url(),
+        pool_pre_ping=True,
+        pool_recycle=3600,
+        pool_size=10,
+        max_overflow=20,
+        echo=settings.DEBUG,
+    )
 
 def init_engine():
-    if is_mysql_scheme():
-        engine = _create_mysql_engine()
-    else:
-        engine = _create_sqlite_engine()
+    global engine, SessionLocal
+    engine = _create_mysql_engine()
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
     return engine
 ```
 
-#### 向量数据库工厂
+### 向量数据库工厂
 
-`app/rag/vector_factory.py` 定义统一的抽象接口：
+`app/rag/vector_factory.py` 统一通过工厂创建 Milvus 实例：
 
 ```python
-from abc import ABC, abstractmethod
-
 class VectorDBInterface(ABC):
     @abstractmethod
     def add_documents(self, documents, embeddings): ...
 
     @abstractmethod
-    def similarity_search(self, query_embedding, k=3): ...
+    def similarity_search(self, query_embedding, k=3, knowledge_base_ids=None, threshold=None): ...
 
     @abstractmethod
-    def get_stats(self): ...
+    def get_total_count(self): ...
+
+    @abstractmethod
+    def delete_by_ids(self, ids): ...
 
     @abstractmethod
     def clear_all(self): ...
 
-class ChromaDBService(VectorDBInterface):
-    """ChromaDB 实现"""
-
 class MilvusService(VectorDBInterface):
     """Milvus 实现"""
 
-def create_vector_db():
-    if is_mysql_scheme():
-        return MilvusService()
-    return ChromaDBService()
+def get_vector_db() -> VectorDBInterface:
+    global _vector_db_instance
+    if _vector_db_instance is None:
+        _vector_db_instance = MilvusService()
+    return _vector_db_instance
 ```
 
-#### 配置模块
+### 配置模块
 
-`app/config/config.py` 集中管理两套方案的所有配置：
+`app/config/config.py` 集中管理所有连接参数：
 
 ```python
 class Settings(BaseSettings):
-    # SQLite 配置
-    SQLITE_DB_PATH: str = "data/chat.db"
-    CHROMA_PERSIST_DIR: str = "data/chroma"
-
-    # MySQL 配置
+    # MySQL
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
     MYSQL_USER: str = "mgagent"
     MYSQL_PASSWORD: str = "mgagent_password_2024"
     MYSQL_DATABASE: str = "mgagent"
 
-    # Milvus 配置
+    # Milvus
     MILVUS_HOST: str = "localhost"
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION: str = "mgagent_knowledge"
+
+    # MinIO
+    MINIO_HOST: str = "localhost"
+    MINIO_PORT: int = 9000
+    MINIO_ACCESS_KEY: str = "minioadmin"
+    MINIO_SECRET_KEY: str = "minioadmin"
+    MINIO_BUCKET: str = "mgagent-documents"
+
+def get_database_url() -> str:
+    return f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}?charset=utf8mb4"
 ```
 
-### 3. Docker Compose 切换
+## 环境变量配置
+
+所有配置集中在 `.env` 文件中：
 
 ```bash
-# 生产环境部署（包含所有服务）
-./scripts/deploy.sh up
+# MySQL
+MYSQL_HOST=localhost
+MYSQL_PORT=3306
+MYSQL_USER=mgagent
+MYSQL_PASSWORD=mgagent_password_2024
+MYSQL_DATABASE=mgagent
 
-# 本地开发（SQLite 模式，无需 Docker）
-./scripts/start-all.sh sqlite
+# Milvus
+MILVUS_HOST=localhost
+MILVUS_PORT=19530
+MILVUS_COLLECTION=mgagent_knowledge
 
-# 本地开发（MySQL 模式，需先启动基础设施）
-./scripts/docker-services.sh start
-./scripts/start-all.sh mysql
+# MinIO
+MINIO_HOST=localhost
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=mgagent-documents
 ```
 
-## 技术栈详细对比
+## Docker Compose 分层部署
 
-### SQLite + ChromaDB
+```bash
+# 基础设施（MySQL + Milvus + etcd + MinIO + Attu）
+docker compose -f docker-compose.infra.yml up -d
 
-| 组件 | 版本 | 说明 |
-|------|------|------|
-| SQLite | 3.x | 轻量级嵌入式数据库，零配置 |
-| ChromaDB | 0.5+ | 嵌入式向量数据库，本地持久化 |
-| 数据存储 | 本地文件 | 无需外部服务 |
+# 应用层（Chat 后端 + Admin 后端 + 两个前端）
+docker compose -f docker-compose.prod.yml up -d --build
+```
 
-**优势：**
-- 部署简单，无需外部依赖
-- 单机性能满足开发需求
-- 零运维成本
+或使用一键脚本：
 
-**劣势：**
-- 不支持高并发
-- 数据量受限于单机
-- 不适合生产环境
-
-### MySQL + Milvus
-
-| 组件 | 版本 | 说明 |
-|------|------|------|
-| MySQL | 8.0 | 企业级关系数据库 |
-| Milvus | 2.4 | 高性能向量数据库 |
-| etcd | v3.5.5 | Milvus 元数据存储 |
-| MinIO | latest | Milvus 对象存储 |
-
-**优势：**
-- 支持高并发和大规模数据
-- 企业级可靠性
-- 丰富的管理工具（Attu）
-
-**劣势：**
-- 部署复杂度较高
-- 需要维护多个服务
-- 资源占用更大
-
-## 选择建议
-
-:::tip 如何选择
-- **个人开发者 / 小型团队**：使用 SQLite + ChromaDB，快速启动、易于调试
-- **企业生产环境**：使用 MySQL + Milvus，保证性能和可靠性
-- **从开发到生产**：开发阶段使用 SQLite，部署时切换到 MySQL，代码零修改
-:::
+```bash
+./scripts/deploy.sh up
+```
 
 ## 相关文档
 
 - [架构概述](/architecture/overview)
 - [数据库设计](/architecture/database)
+- [RAG 架构](/architecture/rag)
 - [Docker 部署](/deployment/docker-deployment)
-- [MySQL 方案部署](/deployment/mysql-deployment)
+- [生产部署](/deployment/production-deployment)

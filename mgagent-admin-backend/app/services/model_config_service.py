@@ -3,10 +3,42 @@
 从数据库读取模型配置，支持 chat 和 embedding 两种类型
 """
 from sqlalchemy.orm import Session
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from app.db.models import ModelConfig
 from app.db.database import get_session
 import uuid
+import hashlib
+import math
+
+try:
+    import numpy as _np
+    _HAS_NUMPY = True
+except ImportError:
+    _HAS_NUMPY = False
+
+
+class _DummyEmbedding:
+    """确定性随机 Embedding（DUMMY_EMBEDDING=1 时启用，用于全流程集成测试）"""
+
+    def __init__(self, dimension: int = 384):
+        self.dimension = dimension
+
+    @staticmethod
+    def _text_to_seed(text: str) -> int:
+        return int(hashlib.md5(text.encode("utf-8")).hexdigest(), 16) % (2**31)
+
+    def _make_vector(self, text: str) -> List[float]:
+        import random as _random
+        _random.seed(self._text_to_seed(text))
+        v = [_random.uniform(-1.0, 1.0) for _ in range(self.dimension)]
+        norm = math.sqrt(sum(x * x for x in v)) or 1.0
+        return [x / norm for x in v]
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        return [self._make_vector(t) for t in texts]
+
+    def embed_query(self, text: str) -> List[float]:
+        return self._make_vector(text)
 
 
 def get_active_model_config(db: Session = None, model_type: str = "chat") -> Dict[str, Any]:
@@ -65,6 +97,11 @@ def _config_to_dict(config: ModelConfig) -> Dict[str, Any]:
 
 def create_embeddings_model(config: Dict[str, Any]):
     """根据配置创建 Embedding 模型实例"""
+    import os as _os
+
+    if _os.environ.get("DUMMY_EMBEDDING") == "1":
+        return _DummyEmbedding(dimension=config.get("dimension", 384))
+
     provider = config.get("provider", "openai")
     is_local = config.get("is_local", False)
     model_name = config.get("model_name", "")
@@ -108,11 +145,15 @@ def create_embeddings_model(config: Dict[str, Any]):
 
 def get_embeddings_model(db: Session = None):
     """获取当前活跃的 Embedding 模型实例"""
+    import os as _os
     config = get_active_embedding_config(db)
     if not config:
-        raise ValueError(
-            "未配置 Embedding 模型，请在模型管理中添加 Embedding 类型的模型并启用"
-        )
+        if _os.environ.get("DUMMY_EMBEDDING") == "1":
+            config = {"dimension": 384, "provider": "local"}
+        else:
+            raise ValueError(
+                "未配置 Embedding 模型，请在模型管理中添加 Embedding 类型的模型并启用"
+            )
     return create_embeddings_model(config)
 
 

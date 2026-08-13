@@ -1,64 +1,38 @@
 """
-数据库工厂 - 根据方案创建对应的数据库连接
-支持 SQLite 和 MySQL
+数据库工厂 - Backend (MySQL only)
 """
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, Session
-from sqlalchemy.pool import StaticPool
-from app.config.config import (
-    settings,
-    is_sqlite_scheme,
-    is_mysql_scheme,
-    get_database_url,
-    get_sqlite_path,
-    BASE_DIR
-)
+from app.config.config import settings, get_database_url
 from .models import Base
 from typing import Generator
 
-# 全局变量
 engine = None
 SessionLocal = None
 
-def _create_sqlite_engine():
-    """创建 SQLite 引擎"""
-    sqlite_path = get_sqlite_path()
-    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    return create_engine(
-        get_database_url(),
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-        echo=settings.DEBUG
-    )
 
 def _create_mysql_engine():
-    """创建 MySQL 引擎"""
     return create_engine(
         get_database_url(),
         pool_pre_ping=True,
         pool_recycle=3600,
         pool_size=10,
         max_overflow=20,
-        echo=settings.DEBUG
+        echo=settings.DEBUG,
     )
+
 
 def init_engine():
     """初始化数据库引擎"""
     global engine, SessionLocal
-    
-    if is_mysql_scheme():
-        engine = _create_mysql_engine()
-    else:
-        engine = _create_sqlite_engine()
-    
+    engine = _create_mysql_engine()
     SessionLocal = sessionmaker(
         autocommit=False,
         autoflush=False,
-        bind=engine
+        bind=engine,
     )
-    
     return engine
+
 
 def init_db():
     """初始化数据库表结构"""
@@ -66,6 +40,26 @@ def init_db():
     if engine is None:
         engine = init_engine()
     Base.metadata.create_all(bind=engine)
+    _migrate_knowledge_base(engine)
+
+
+def _migrate_knowledge_base(bind) -> None:
+    """补齐旧库 documents.knowledge_base_id 列（幂等）"""
+    try:
+        from sqlalchemy import inspect, text
+        insp = inspect(bind)
+        if insp.has_table("documents"):
+            columns = {col["name"] for col in insp.get_columns("documents")}
+            if "knowledge_base_id" not in columns:
+                bind.execute(text(
+                    "ALTER TABLE documents ADD COLUMN knowledge_base_id VARCHAR(64) DEFAULT NULL"
+                ))
+                bind.commit()
+                print("[migrate] added documents.knowledge_base_id column")
+        print("[migrate] knowledge_base migration complete")
+    except Exception as e:
+        print(f"[migrate] knowledge_base migration failed (non-fatal): {e}")
+
 
 def get_db() -> Generator[Session, None, None]:
     """获取数据库会话的依赖函数"""
@@ -79,11 +73,13 @@ def get_db() -> Generator[Session, None, None]:
     finally:
         db.close()
 
+
 def get_session(db: Session = None) -> Session:
     """获取或创建数据库会话"""
     if db:
         return db
     return next(get_db())
+
 
 def get_engine():
     """获取当前引擎"""

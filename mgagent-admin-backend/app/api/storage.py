@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from app.db.database import get_db, init_engine
 from app.db.models import Admin
-from app.config.config import is_sqlite_scheme, get_sqlite_path, get_database_url
+from app.config.config import get_database_url
 from .auth import get_current_admin
 
 router = APIRouter()
@@ -52,8 +52,8 @@ async def get_storage_db_stats(admin: Admin = Depends(get_current_admin)):
                 except Exception:
                     total_records[table] = 0
         
-        db_type = "sqlite" if is_sqlite_scheme() else "mysql"
-        db_path = str(get_sqlite_path()) if is_sqlite_scheme() else get_database_url()
+        db_type = "mysql"
+        db_path = get_database_url()
         
         return StorageDBStats(
             database_path=db_path,

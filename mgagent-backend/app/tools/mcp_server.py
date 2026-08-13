@@ -10,7 +10,7 @@ class MGAgentMCP(MCP):
     def calculate(self, expression: str) -> str:
         return calculate(expression)
     
-    @MCP.tool("query_database", description="查询SQLite数据库")
+    @MCP.tool("query_database", description="查询MySQL数据库")
     def query_database(self, query: str) -> str:
         return query_database(query)
     

@@ -11,7 +11,7 @@ from app.api.knowledge import router as knowledge_router
 from app.api.vector import router as vector_router
 from app.api.security import router as security_router
 from app.api.dashboard import router as dashboard_router
-from app.config.config import settings, get_scheme_info, get_database_scheme
+from app.config.config import settings, get_scheme_info
 from app.db import init_db
 from app.db.database import get_db, SessionLocal
 from app.db.crud.admin import create_admin, get_admin_by_username
@@ -54,6 +54,12 @@ async def startup_event():
     except Exception as e:
         print(f"[startup] seed_providers failed (non-fatal): {e}")
 
+    try:
+        from app.services.knowledge_base_service import ensure_default_knowledge_base
+        ensure_default_knowledge_base(db)
+    except Exception as e:
+        print(f"[startup] ensure_default_knowledge_base failed (non-fatal): {e}")
+
     if not get_admin_by_username(db, "admin"):
         create_admin(
             db,
@@ -67,11 +73,10 @@ async def startup_event():
 
 @app.get("/")
 async def root():
-    scheme = get_database_scheme()
     return {
         "message": "MGAgent 管理台 API",
         "version": "2.0.0",
-        "database_scheme": scheme.value,
+        "database_scheme": "mysql",
         "endpoints": {
             "auth": "/admin/api/auth",
             "users": "/admin/api/users",

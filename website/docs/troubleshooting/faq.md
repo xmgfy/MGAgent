@@ -93,22 +93,6 @@ docker compose -f docker-compose.infra.yml up -d
 
 ## 配置相关
 
-### Q: 如何切换技术栈方案？
-
-**解决：**
-
-通过切换 `.env` 文件来选择数据库方案：
-
-```bash
-# 切换到 MySQL 方案
-cp .env.mysql .env
-
-# 切换到 SQLite 方案
-cp .env.sqlite .env
-
-# 重启服务生效
-```
-
 ### Q: 模型配置在哪里修改？
 
 **问题：** 想修改 LLM 模型配置，但找不到配置文件。
@@ -167,6 +151,10 @@ MGAgent 使用 **数据库驱动** 的模型配置：
 | 文本 | `.txt` |
 | Word | `.docx` |
 | Markdown | `.md` |
+| Excel | `.xlsx` / `.xls` |
+| CSV | `.csv` |
+| JSON | `.json` |
+| 代码文件 | `.py` / `.js` / `.java` / `.ts` 等 |
 
 ### Q: 知识库检索效果不好？
 
@@ -253,18 +241,18 @@ git pull origin main
 
 ### Q: 升级会丢失数据吗？
 
-- **SQLite 方案**：数据存储在 `mgagent-backend/data/` 目录，升级不会删除
-- **MySQL 方案**：数据存储在 Docker 数据卷，升级不会删除
+- 数据存储在 Docker 数据卷，升级不会删除
 - 建议升级前备份数据
 
 ### Q: 如何备份数据？
 
 ```bash
-# SQLite 方案
-cp -r mgagent-backend/data/ backup_$(date +%Y%m%d)
-
-# MySQL 方案
+# MySQL 备份
 docker exec mgagent-mysql mysqldump -u root -p mgagent > backup.sql
+
+# Docker 卷备份（整体）
+docker run --rm -v mgagent_mysql_data:/data -v $(pwd):/backup \
+  alpine tar czf /backup/mysql.tar.gz /data
 ```
 
 ## 获取帮助

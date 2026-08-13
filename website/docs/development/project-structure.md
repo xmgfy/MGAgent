@@ -18,7 +18,7 @@ MGAgent/
 │   │   │   ├── core.py           # EnterpriseAgent 实现
 │   │   │   └── prompt.py         # 提示词模板
 │   │   ├── config/               # 配置模块
-│   │   │   ├── config.py         # 统一配置（支持双方案切换）
+│   │   │   ├── config.py         # 统一 MySQL + Milvus + MinIO 配置
 │   │   │   └── settings.py       # 基础设置
 │   │   ├── db/                   # 数据库模块
 │   │   │   ├── database.py       # 数据库工厂
@@ -38,11 +38,9 @@ MGAgent/
 │   │   ├── main.py               # FastAPI 入口
 │   │   └── __init__.py
 │   ├── data/                     # 数据存储目录
-│   │   ├── chroma/               # ChromaDB 数据
 │   │   └── documents/            # 上传的文档
 │   ├── Dockerfile                # Docker 构建文件
-│   ├── .env.sqlite               # SQLite 环境配置
-│   ├── .env.mysql                # MySQL 环境配置
+│   ├── .env.mysql                # 环境配置
 │   └── requirements.txt          # Python 依赖
 │
 ├── mgagent-admin-backend/        # Admin 后端服务
@@ -129,15 +127,14 @@ MGAgent/
 
 | 文件 | 说明 |
 |------|------|
-| `app/config/config.py` | 统一配置模块，支持 `.env.sqlite` / `.env.mysql` 切换 |
-| `app/db/database.py` | 数据库工厂，动态创建 SQLite 或 MySQL 引擎 |
-| `app/rag/vector_factory.py` | 向量数据库工厂，动态创建 ChromaDB 或 Milvus 实例 |
+| `app/config/config.py` | 统一 MySQL + Milvus + MinIO 配置 |
+| `app/db/database.py` | 统一创建 MySQL 引擎 |
+| `app/rag/vector_factory.py` | 统一创建 Milvus 实例 |
 | `app/services/model_config_service.py` | 模型配置服务，从数据库读取和管理模型配置 |
 | `app/agent/core.py` | Agent 核心逻辑，工具调用和对话处理 |
 | `docker-compose.prod.yml` | 生产环境全栈 Docker Compose 配置 |
 | `docker-compose.infra.yml` | MySQL + Milvus 基础设施 Docker Compose 配置 |
-| `.env.sqlite` | SQLite 方案环境变量文件 |
-| `.env.mysql` | MySQL 方案环境变量文件 |
+| `.env.mysql` | 环境变量文件 |
 | `scripts/deploy.sh` | 一键生产部署脚本 |
 | `scripts/docker-services.sh` | Docker 基础设施服务管理脚本 |
 | `scripts/init.sh` | 一键项目初始化脚本 |
@@ -174,10 +171,9 @@ async def health():
 ```python
 # app/db/database.py
 def init_engine():
-    if is_mysql_env():
-        engine = _create_mysql_engine()
-    else:
-        engine = _create_sqlite_engine()
+    engine = _create_mysql_engine()
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+    return engine, SessionLocal
 ```
 
 ### 向量数据库工厂模式
@@ -185,9 +181,7 @@ def init_engine():
 ```python
 # app/rag/vector_factory.py
 def create_vector_db():
-    if is_mysql_env():
-        return MilvusService()
-    return ChromaDBService()
+    return MilvusService()
 ```
 
 ## 前端架构模式
@@ -272,4 +266,4 @@ CMD ["nginx", "-g", "daemon off;"]
 
 - [脚本使用指南](/development/scripts)
 - [API 参考](/development/api-reference)
-- [双技术栈架构](/architecture/dual-stack)
+- [技术栈架构](/architecture/dual-stack)

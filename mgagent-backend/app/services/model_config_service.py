@@ -98,6 +98,15 @@ def get_active_embedding_config() -> Optional[dict]:
         return None
 
 
+def get_active_reranker_config() -> Optional[dict]:
+    """rag/retriever.py 等使用：返回 reranker 配置 dict，无则返回 None"""
+    try:
+        row = get_active_model_config_row(model_type="reranker")
+        return _row_to_dict(row)
+    except ValueError:
+        return None
+
+
 def create_embeddings_model(config_dict: dict):
     """rag/retriever.py 等使用：从 dict 创建 LangChain Embeddings"""
     from app.services.llm_factory import create_embedding, ModelConfig as FactoryConfig, build_llm_config

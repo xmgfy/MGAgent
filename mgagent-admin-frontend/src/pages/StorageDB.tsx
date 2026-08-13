@@ -65,7 +65,7 @@ const StorageDB = () => {
           </div>
           <div>
             <h2 className="text-lg font-semibold text-gray-800">存储数据库</h2>
-            <p className="text-sm text-gray-500">管理和查询 SQLite 数据库</p>
+            <p className="text-sm text-gray-500">管理和查询 MySQL 数据库</p>
           </div>
         </div>
         <Button variant="secondary" onClick={loadData}>

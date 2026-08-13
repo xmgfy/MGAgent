@@ -1,5 +1,5 @@
 """
-向量数据库管理接口 - 支持双方案（ChromaDB / Milvus）
+向量数据库管理接口 - Milvus
 嵌入模型从数据库配置获取，无兜底逻辑
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from typing import List, Dict, Any
 from app.db.models import Admin
 from .auth import get_current_admin
-from app.config.config import is_mysql_scheme, settings
+from app.config.config import settings
 from app.rag.vector_factory import get_vector_db
 from app.services.model_config_service import get_embeddings_model
 
@@ -37,51 +37,29 @@ async def get_vector_db_stats(admin: Admin = Depends(get_current_admin)):
         vector_db = get_vector_db()
         total_chunks = vector_db.get_total_count()
         
-        # 获取嵌入模型信息（可能未配置）
         try:
             embeddings = get_embeddings_model()
             embedding_model_name = type(embeddings).__name__
         except Exception:
             embedding_model_name = "未配置"
         
-        if is_mysql_scheme():
-            return VectorDBStats(
-                total_chunks=total_chunks,
-                vector_db_type="milvus",
-                host=settings.MILVUS_HOST,
-                port=str(settings.MILVUS_PORT),
-                collection_name=settings.MILVUS_COLLECTION,
-                embedding_model=embedding_model_name
-            )
-        else:
-            from app.config.config import get_chroma_dir
-            return VectorDBStats(
-                total_chunks=total_chunks,
-                vector_db_type="chromadb",
-                persist_directory=str(get_chroma_dir()),
-                collection_name="mgagent_knowledge",
-                embedding_model=embedding_model_name
-            )
+        return VectorDBStats(
+            total_chunks=total_chunks,
+            vector_db_type="milvus",
+            host=settings.MILVUS_HOST,
+            port=str(settings.MILVUS_PORT),
+            collection_name=settings.MILVUS_COLLECTION,
+            embedding_model=embedding_model_name,
+        )
     except Exception as e:
-        # 向量数据库连接失败时返回基础信息
-        if is_mysql_scheme():
-            return VectorDBStats(
-                total_chunks=0,
-                vector_db_type="milvus",
-                host=settings.MILVUS_HOST,
-                port=str(settings.MILVUS_PORT),
-                collection_name=settings.MILVUS_COLLECTION,
-                embedding_model="未连接"
-            )
-        else:
-            from app.config.config import get_chroma_dir
-            return VectorDBStats(
-                total_chunks=0,
-                vector_db_type="chromadb",
-                persist_directory=str(get_chroma_dir()),
-                collection_name="mgagent_knowledge",
-                embedding_model="未连接"
-            )
+        return VectorDBStats(
+            total_chunks=0,
+            vector_db_type="milvus",
+            host=settings.MILVUS_HOST,
+            port=str(settings.MILVUS_PORT),
+            collection_name=settings.MILVUS_COLLECTION,
+            embedding_model="未连接",
+        )
 
 
 @router.get("/vector-db/chunks", response_model=List[VectorChunk])

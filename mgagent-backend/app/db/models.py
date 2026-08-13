@@ -121,18 +121,62 @@ class ChatMessage(Base):
     
     session = relationship("ChatSession", back_populates="messages")
 
+class KnowledgeBase(Base):
+    """知识库表 - 支持每库独立的 Embedding、分块、召回、重排配置"""
+    __tablename__ = "knowledge_bases"
+
+    id = Column(String(64), primary_key=True, index=True)
+    name = Column(String(100), nullable=False, index=True)
+    description = Column(Text, nullable=True)
+    tenant_id = Column(String(64), ForeignKey("tenants.id"), nullable=True, index=True)
+
+    # 向量库类型（milvus / default）
+    vector_db_type = Column(String(20), nullable=False, default="default")
+
+    # Embedding 模型（NULL 表示用全局默认）
+    embedding_model_id = Column(String(64), ForeignKey("model_configs.id"), nullable=True)
+
+    # 分块参数
+    chunk_size = Column(Integer, nullable=False, default=500)
+    chunk_overlap = Column(Integer, nullable=False, default=50)
+    chunk_separator = Column(String(500), nullable=True)
+
+    # 召回参数
+    retrieve_limit = Column(Integer, nullable=False, default=5)
+    similarity_threshold = Column(Float, nullable=True)
+
+    # 重排（Rerank）
+    enable_rerank = Column(Boolean, nullable=False, default=False)
+    rerank_model_id = Column(String(64), ForeignKey("model_configs.id"), nullable=True)
+    rerank_top_n = Column(Integer, nullable=False, default=3)
+    rerank_score_threshold = Column(Float, nullable=True)
+
+    # 混合检索
+    enable_hybrid = Column(Boolean, nullable=False, default=False)
+    hybrid_alpha = Column(Float, nullable=False, default=0.7)
+
+    is_active = Column(Boolean, nullable=False, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+    updated_at = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    tenant = relationship("Tenant")
+
+
 class Document(Base):
     __tablename__ = "documents"
-    
+
     id = Column(String(64), primary_key=True, index=True)
     filename = Column(String(200), index=True)
     file_type = Column(String(20))
     file_size = Column(Integer)
     status = Column(String(20), default="uploaded")
     tenant_id = Column(String(64), ForeignKey("tenants.id"), nullable=True)
+    knowledge_base_id = Column(String(64), ForeignKey("knowledge_bases.id"), nullable=True, index=True)
+    chunk_ids = Column(Text, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
-    
+
     tenant = relationship("Tenant")
+    knowledge_base = relationship("KnowledgeBase")
 
 class AnonymousStats(Base):
     __tablename__ = "anonymous_stats"

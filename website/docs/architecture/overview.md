@@ -10,14 +10,14 @@ slug: /architecture/overview
 
 MGAgent 的架构设计遵循以下核心原则：
 
-1. **双技术栈支持**：同时支持 SQLite+ChromaDB 和 MySQL+Milvus 两套技术栈
+1. **生产级技术栈**：统一使用 MySQL + Milvus + MinIO，一套方案覆盖开发和生产
 2. **前后端分离**：前端和后端完全独立，便于团队协作
 3. **统一接口抽象**：通过工厂模式实现数据库和向量数据库的统一接口
-4. **配置驱动切换**：基于环境变量动态选择技术栈方案
+4. **配置集中管理**：所有技术选型、连接参数集中在 `config.py` 和 `.env`
 5. **模块化设计**：API 按功能模块拆分（auth、users、model、knowledge 等）
 6. **插件化工具**：Agent 工具采用插件化设计，易于扩展
 7. **动态模型配置**：所有 LLM 配置从数据库读取，无需静态配置
-8. **容器化部署**：支持 Docker Compose 一键部署
+8. **容器化部署**：支持 Docker Compose 一键部署，分层管理基础设施和应用层
 
 ## 系统架构图
 
@@ -34,15 +34,15 @@ flowchart TB
     end
 
     subgraph S3["数据层 Data Layer"]
-        E[("SQLite / MySQL<br/>关系数据库")]
-        F[("ChromaDB / Milvus<br/>向量数据库")]
+        E[("MySQL 8.0<br/>关系数据库")]
+        F[("Milvus 2.4<br/>向量数据库")]
         G[("etcd & MinIO<br/>Milvus 依赖")]
         H["Document Storage<br/>文档存储"]
     end
 
     subgraph S4["AI能力层 AI Layer"]
         I[LangChain Agent]
-        J[RAG Retriever]
+        J["RAG Pipeline<br/>Hybrid + Rerank"]
         K[LLM Models]
         L["Tools<br/>计算器/数据库查询"]
     end
@@ -87,9 +87,9 @@ flowchart TB
 |------|------|------|
 | API 路由 | `app/api/` | RESTful API 接口定义 |
 | Agent 核心 | `app/agent/` | LangChain Agent 逻辑 |
-| 配置模块 | `app/config/` | 统一配置，支持双方案切换 |
-| 数据库 | `app/db/` | 数据库工厂与 ORM 模型 |
-| RAG 模块 | `app/rag/` | 检索增强生成，含向量库工厂 |
+| 配置模块 | `app/config/` | 统一配置，集中管理 MySQL / Milvus / MinIO |
+| 数据库 | `app/db/` | SQLAlchemy ORM 模型与 MySQL 工厂 |
+| RAG 模块 | `app/rag/` | 检索增强生成，含向量库工厂、Hybrid/Rerank 流水线 |
 | 服务层 | `app/services/` | 业务逻辑（模型配置管理） |
 | 工具集 | `app/tools/` | Agent 可用工具（计算器、SQL 查询） |
 
@@ -119,8 +119,8 @@ sequenceDiagram
     participant FE as 前端
     participant BE as 后端 API
     participant AG as Agent
-    participant RAG as 检索器
-    participant VDB as 向量数据库
+    participant RAG as RAG Pipeline
+    participant VDB as Milvus
     participant LLM as 大语言模型
 
     U->>FE: 发送消息
@@ -130,9 +130,10 @@ sequenceDiagram
     AG->>LLM: 生成工具调用
     LLM-->>AG: 返回工具调用指令
     AG->>RAG: 调用知识库检索
-    RAG->>VDB: 相似度搜索
-    VDB-->>RAG: 返回相关文档
-    RAG-->>AG: 返回检索结果
+    RAG->>VDB: 向量相似度 + BM25
+    VDB-->>RAG: 返回候选文档
+    RAG->>RAG: RRF 融合 + Rerank 重排
+    RAG-->>AG: 返回 Top-N 文档
     AG->>LLM: 总结结果
     LLM-->>AG: 返回自然语言回答
     AG-->>BE: 返回回复
@@ -140,18 +141,21 @@ sequenceDiagram
     FE-->>U: 渲染消息
 ```
 
-### RAG 检索流程
+### RAG 流水线
 
 ```mermaid
 flowchart LR
-    A[用户提问] --> B["文本嵌入<br/>Embedding"]
-    B --> C[向量搜索]
-    C --> D{向量数据库类型}
-    D -->|ChromaDB| E[ChromaDB 检索]
-    D -->|Milvus| F[Milvus 检索]
-    E --> G[返回相关文档]
-    F --> G
-    G --> H[LLM 总结回答]
+    A[用户提问] --> B["Query Embedding"]
+    B --> C["向量检索<br/>Milvus 相似度"]
+    B --> D["BM25 关键词检索"]
+    C --> E["RRF 融合<br/>Hybrid Alpha"]
+    D --> E
+    E --> F{启用 Rerank?}
+    F -->|是| G["Rerank 重排<br/>按 score_threshold 过滤"]
+    F -->|否| H[阈值过滤]
+    G --> H
+    H --> I["Top-K 文档"]
+    I --> J[LLM 总结回答]
 ```
 
 ## 技术选型
@@ -165,6 +169,7 @@ flowchart LR
 | SQLAlchemy | >= 2.0 | ORM 数据库操作 |
 | PyJWT | >= 2.8 | JWT 身份认证 |
 | bcrypt | >= 4.0 | 密码加密 |
+| PyMilvus | >= 2.4 | Milvus 向量数据库客户端 |
 
 ### 前端
 
@@ -183,11 +188,13 @@ flowchart LR
 | Docker | 容器化部署 |
 | Docker Compose | 服务编排 |
 | Nginx | 前端部署与 API 代理 |
+| MySQL 8.0 | 关系数据库 |
+| Milvus 2.4 | 向量数据库 |
+| MinIO | 对象存储 |
 | etcd | Milvus 元数据存储 |
-| MinIO | Milvus 对象存储 |
 
 ## 相关文档
 
-- [双技术栈架构](/architecture/dual-stack)
 - [数据库设计](/architecture/database)
+- [RAG 架构](/architecture/rag)
 - [模型配置架构](/architecture/model-config)

@@ -1,7 +1,9 @@
 """
-本地 Embedding 模型预设列表
+本地 Embedding / Reranker 模型预设列表
 用于前端下拉选择和自动填充维度
 """
+from typing import Optional
+
 
 LOCAL_EMBEDDING_MODELS = [
     {
@@ -112,7 +114,7 @@ def get_local_models_list() -> list:
     return LOCAL_EMBEDDING_MODELS
 
 
-def get_model_by_id(model_id: str) -> dict | None:
+def get_model_by_id(model_id: str) -> Optional[dict]:
     """根据 ID 获取模型信息"""
     for model in LOCAL_EMBEDDING_MODELS:
         if model["id"] == model_id:
@@ -120,9 +122,82 @@ def get_model_by_id(model_id: str) -> dict | None:
     return None
 
 
-def get_model_by_name(model_name: str) -> dict | None:
+def get_model_by_name(model_name: str) -> Optional[dict]:
     """根据模型名称获取信息"""
     for model in LOCAL_EMBEDDING_MODELS:
         if model["name"] == model_name:
             return model
     return None
+
+
+LOCAL_RERANKER_MODELS = [
+    {
+        "id": "bge-reranker-v2-m3",
+        "name": "BAAI/bge-reranker-v2-m3",
+        "display_name": "BGE Reranker V2 M3 (多语种最强)",
+        "size_mb": 568,
+        "language": "zh+en+multi",
+        "description": "智源 BAAI 出品，开源多语种 Cross-Encoder，目前效果最强的开源重排模型，支持中英+100+语言",
+        "recommended_for": "生产环境首选，中英混合知识库",
+        "max_length": 8192,
+    },
+    {
+        "id": "bge-reranker-large",
+        "name": "BAAI/bge-reranker-large",
+        "display_name": "BGE Reranker Large (v1)",
+        "size_mb": 560,
+        "language": "zh+en",
+        "description": "BAAI v1 版 large，成熟稳定，中文效果好",
+        "recommended_for": "纯中文知识库",
+        "max_length": 512,
+    },
+    {
+        "id": "bge-reranker-base",
+        "name": "BAAI/bge-reranker-base",
+        "display_name": "BGE Reranker Base (轻量)",
+        "size_mb": 102,
+        "language": "zh+en",
+        "description": "BAAI 轻量版，速度最快，资源受限环境首选",
+        "recommended_for": "CPU-only / 低延迟场景",
+        "max_length": 512,
+    },
+    {
+        "id": "jina-reranker-turbo",
+        "name": "jinaai/jina-reranker-turbo",
+        "display_name": "Jina Reranker Turbo (蒸馏快版)",
+        "size_mb": 130,
+        "language": "zh+en",
+        "description": "Jina 出品的蒸馏快版，兼顾速度和精度",
+        "recommended_for": "对延迟敏感的生产环境",
+        "max_length": 512,
+    },
+]
+
+
+def get_local_reranker_models_list() -> list:
+    """获取本地 Reranker 模型列表"""
+    return LOCAL_RERANKER_MODELS
+
+
+def get_reranker_by_id(model_id: str) -> Optional[dict]:
+    """根据 ID 获取 Reranker 模型信息"""
+    for model in LOCAL_RERANKER_MODELS:
+        if model["id"] == model_id:
+            return model
+    return None
+
+
+def get_reranker_by_name(model_name: str) -> Optional[dict]:
+    """根据模型名称获取 Reranker 信息"""
+    for model in LOCAL_RERANKER_MODELS:
+        if model["name"] == model_name:
+            return model
+    return None
+
+
+def get_all_local_models() -> dict:
+    """获取所有本地模型（embedding + reranker）"""
+    return {
+        "embedding": LOCAL_EMBEDDING_MODELS,
+        "reranker": LOCAL_RERANKER_MODELS,
+    }

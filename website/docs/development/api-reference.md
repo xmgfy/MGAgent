@@ -68,7 +68,9 @@ GET /api/health
 ```json
 {
   "status": "ok",
-  "scheme": "sqlite",
+  "scheme": "mysql",
+  "vector_db": "milvus",
+  "file_storage": "minio",
   "version": "2.3.0"
 }
 ```

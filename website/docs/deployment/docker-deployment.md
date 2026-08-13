@@ -1,6 +1,6 @@
 ---
 title: Docker 部署
-description: MGAgent 使用 Docker Compose 部署的完整指南，包括 SQLite 和 MySQL 两种方案
+description: MGAgent Docker Compose 部署完整指南，分层部署 MySQL + Milvus + 应用层
 slug: /deployment/docker-deployment
 ---
 
@@ -8,12 +8,12 @@ slug: /deployment/docker-deployment
 
 ## 概述
 
-MGAgent 提供两种 Docker Compose 部署方案：
+MGAgent 使用 Docker Compose 分层部署：
 
-| 方案 | Compose 文件 | 适用场景 |
+| 层级 | Compose 文件 | 包含服务 |
 |------|-------------|---------|
-| SQLite + ChromaDB | `docker-compose.prod.yml` | 快速体验、单机部署 |
-| MySQL + Milvus | `docker-compose.infra.yml` + `docker-compose.prod.yml` | 生产环境、大规模数据 |
+| 基础设施 | `docker-compose.infra.yml` | MySQL、Milvus、etcd、MinIO、Attu |
+| 应用层 | `docker-compose.prod.yml` | Chat 后端、Admin 后端、Chat 前端、Admin 前端 |
 
 ## 方式一：一键部署脚本（推荐）
 
@@ -36,10 +36,30 @@ cp .env.production.example .env.production
 
 ## 方式二：手动 Docker Compose
 
-### SQLite + ChromaDB 方案
+### 第一步：启动基础设施
 
 ```bash
-# 构建并启动所有服务
+# 启动 MySQL + Milvus + etcd + MinIO + Attu
+docker compose -f docker-compose.infra.yml up -d
+
+# 查看状态
+docker compose -f docker-compose.infra.yml ps
+```
+
+**基础设施服务列表**：
+
+| 服务 | 镜像 | 端口 | 说明 |
+|------|------|------|------|
+| MySQL | mysql:8.0 | 3306:3306 | 关系数据库 |
+| Milvus | milvusdb/milvus:v2.4.12 | 19530:19530 | 向量数据库 |
+| etcd | quay.io/coreos/etcd:v3.5.5 | 2379 (内部) | Milvus 元数据存储 |
+| MinIO | minio/minio:latest | 9000:9000 | Milvus 对象存储 |
+| Attu | zilliz/attu:v2.4 | 8003:3000 | Milvus 管理界面 |
+
+### 第二步：启动应用层
+
+```bash
+# 构建并启动所有应用服务
 docker compose -f docker-compose.prod.yml up -d --build
 
 # 查看服务状态
@@ -47,12 +67,9 @@ docker compose -f docker-compose.prod.yml ps
 
 # 查看日志
 docker compose -f docker-compose.prod.yml logs -f
-
-# 停止服务
-docker compose -f docker-compose.prod.yml down
 ```
 
-### 服务列表
+**应用层服务列表**：
 
 | 服务 | 镜像 | 端口 | 说明 |
 |------|------|------|------|
@@ -61,164 +78,53 @@ docker compose -f docker-compose.prod.yml down
 | mgagent-frontend | 自建 | 3000:80 | Chat 前端 (Nginx) |
 | mgagent-admin-frontend | 自建 | 3001:80 | Admin 前端 (Nginx) |
 
-### 环境变量
+### 第三步：访问系统
 
-```yaml
-env_file:
-  - .env.sqlite
-environment:
-  - SQLITE_DB_PATH=./data/sqlite/app.db
-  - CHROMA_PATH=./data/chroma
-  - DEBUG=True
-  - API_HOST=0.0.0.0
-  - API_PORT=8000
-```
+| 服务 | 地址 | 说明 |
+|------|------|------|
+| Chat 前端 | http://localhost:3000 | 智能对话 |
+| Admin 前端 | http://localhost:3001 | 管理后台 |
+| Chat API | http://localhost:8000/docs | 后端 API 文档 |
+| Admin API | http://localhost:8001/docs | 管理 API 文档 |
+| Attu | http://localhost:8003 | Milvus 管理界面 |
 
-## Docker Compose 文件详解
+## 环境变量配置
 
-### docker-compose.prod.yml
-
-SQLite + ChromaDB 全栈配置，包含所有 4 个服务：
-
-```yaml
-services:
-  mgagent-backend:
-    build:
-      context: ./mgagent-backend
-      dockerfile: Dockerfile
-    env_file:
-      - .env.sqlite
-    environment:
-      - SQLITE_DB_PATH=./data/sqlite/app.db
-      - CHROMA_PATH=./data/chroma
-    volumes:
-      - ./mgagent-backend/data:/app/data
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      retries: 3
-
-  mgagent-frontend:
-    build:
-      context: ./mgagent-frontend
-      dockerfile: Dockerfile
-    depends_on:
-      - mgagent-backend
-    ports:
-      - "3000:80"
-```
-
-### docker-compose.infra.yml
-
-MySQL + Milvus 基础设施配置：
-
-```yaml
-services:
-  mysql:
-    image: mysql:8.0
-    environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    volumes:
-      - mysql_data:/var/lib/mysql
-      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-  milvus:
-    image: milvusdb/milvus:v2.4.12
-    depends_on:
-      - etcd
-      - minio
-    environment:
-      ETCD_ENDPOINTS: etcd:2379
-      MINIO_ADDRESS: minio:9000
-
-  etcd:
-    image: quay.io/coreos/etcd:v3.5.5
-
-  minio:
-    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
-
-  attu:
-    image: zilliz/attu:v2.4
-    ports:
-      - "8003:3000"
-```
-
-### docker-compose.prod.yml（MySQL 方案）
-
-MySQL + Milvus 应用层配置：
-
-```yaml
-services:
-  mgagent-backend:
-    build:
-      context: ./mgagent-backend
-    env_file:
-      - .env.mysql
-    environment:
-      - MYSQL_HOST=mysql
-      - MYSQL_PORT=3306
-      - MILVUS_HOST=milvus
-      - MILVUS_PORT=19530
-
-  mgagent-admin-backend:
-    build:
-      context: ./mgagent-admin-backend
-
-  mgagent-frontend:
-    build:
-      context: ./mgagent-frontend
-
-  mgagent-admin-frontend:
-    build:
-      context: ./mgagent-admin-frontend
-    depends_on:
-      mgagent-admin-backend:
-        condition: service_healthy
-```
-
-## 常用命令
+### `.env.production`
 
 ```bash
-# 启动服务
-docker compose -f docker-compose.prod.yml up -d
+# MySQL 配置
+MYSQL_HOST=mysql
+MYSQL_PORT=3306
+MYSQL_ROOT_PASSWORD=your_root_password
+MYSQL_DATABASE=mgagent
+MYSQL_USER=mgagent
+MYSQL_PASSWORD=your_password
 
-# 重新构建并启动
-docker compose -f docker-compose.prod.yml up -d --build
+# Milvus 配置
+MILVUS_HOST=milvus
+MILVUS_PORT=19530
+MILVUS_COLLECTION=mgagent_knowledge
 
-# 停止服务
-docker compose -f docker-compose.prod.yml down
+# MinIO 配置
+MINIO_HOST=minio
+MINIO_PORT=9000
+MINIO_ACCESS_KEY=minioadmin
+MINIO_SECRET_KEY=minioadmin
+MINIO_BUCKET=mgagent-documents
 
-# 查看日志
-docker compose -f docker-compose.prod.yml logs -f --tail=100
-
-# 进入容器
-docker exec -it mgagent-backend bash
-
-# 清理所有数据
-docker compose -f docker-compose.prod.yml down -v
-
-# 查看资源使用
-docker stats
+# 服务端口
+BACKEND_PORT=8000
+ADMIN_BACKEND_PORT=8001
+FRONTEND_PORT=3000
+ADMIN_FRONTEND_PORT=3001
 ```
+
+:::warning 注意
+在 Docker 网络中，服务间通信使用 **服务名**（`mysql`、`milvus`）而非 `localhost`。
+:::
 
 ## 数据持久化
-
-### SQLite 方案
-
-数据存储在本地挂载目录：
-
-```
-mgagent-backend/data/
-├── sqlite/
-│   └── app.db          # SQLite 数据库文件
-├── chroma/             # ChromaDB 向量数据
-└── documents/          # 上传的文档
-```
-
-### MySQL 方案
 
 数据存储在 Docker 命名卷：
 
@@ -227,30 +133,44 @@ mgagent-backend/data/
 docker volume ls
 
 # 备份 MySQL
-docker run --rm -v mgagent_mysql_data:/data mysql:8.0 \
-  mysqldump -u root -p${MYSQL_ROOT_PASSWORD} mgagent > backup.sql
+docker exec mgagent-mysql mysqldump -u mgagent -p mgagent > backup.sql
 
 # 恢复 MySQL
-docker exec -i mgagent-mysql mysql -u root -p${MYSQL_ROOT_PASSWORD} mgagent < backup.sql
+docker exec -i mgagent-mysql mysql -u mgagent -p mgagent < backup.sql
+```
+
+## 常用命令速查
+
+```bash
+# 启动基础设施
+docker compose -f docker-compose.infra.yml up -d
+
+# 启动应用层
+docker compose -f docker-compose.prod.yml up -d --build
+
+# 停止所有
+docker compose -f docker-compose.infra.yml down
+docker compose -f docker-compose.prod.yml down
+
+# 重启
+docker compose -f docker-compose.prod.yml restart
+
+# 进入容器
+docker exec -it mgagent-backend bash
+
+# 查看资源使用
+docker stats
+
+# 清理所有数据卷（谨慎）
+docker compose -f docker-compose.infra.yml down -v
 ```
 
 ## 网络配置
 
-所有服务通过 `mgagent-network` 网络互联：
-
-```yaml
-networks:
-  mgagent-network:
-    driver: bridge
-    name: mgagent-network
-```
-
-:::tip MySQL 方案
-MySQL 方案使用 `mgagent-network` 外部网络，基础设施和应用层通过该网络通信。使用 `docker-compose.infra.yml` 启动基础设施后，网络会被自动创建。
-:::
+所有服务通过 `mgagent-network` 外部网络互联。`docker-compose.infra.yml` 创建网络，`docker-compose.prod.yml` 加入网络。
 
 ## 相关文档
 
-- [MySQL 方案部署](/deployment/mysql-deployment)
+- [MySQL 基础设施部署](/deployment/mysql-deployment)
 - [生产部署](/deployment/production-deployment)
 - [Docker 配置](/configuration/docker)

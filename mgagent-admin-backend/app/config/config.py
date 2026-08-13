@@ -1,19 +1,14 @@
 """
 统一配置模块 - Admin Backend
-支持双技术栈方案
 
-注意：大模型相关配置（API Key、Base URL、模型名称等）统一从数据库中读取，不再使用本地静态配置。
+唯一技术栈: MySQL + Milvus + MinIO
+大模型相关配置统一从数据库中读取，不再使用本地静态配置。
 """
 from pydantic_settings import BaseSettings
 from pathlib import Path
-from enum import Enum
 import os
 import secrets
 
-class DatabaseScheme(str, Enum):
-    """数据库方案枚举"""
-    SQLITE = "sqlite"      # 方案1: SQLite + ChromaDB
-    MYSQL = "mysql"        # 方案2: MySQL + Milvus + MinIO
 
 class Settings(BaseSettings):
     """统一配置"""
@@ -24,21 +19,12 @@ class Settings(BaseSettings):
         "extra": "ignore",
     }
     
-    # ========== 基础配置 ==========
-    DATABASE_SCHEME: str = os.getenv("DATABASE_SCHEME", "sqlite")
-    
     ADMIN_API_HOST: str = "0.0.0.0"
     ADMIN_API_PORT: int = 8001
     DEBUG: bool = True
     
-    # JWT 密钥（自动生成，或通过环境变量配置）
     SECRET_KEY: str = os.getenv("SECRET_KEY", secrets.token_hex(32))
     
-    # ========== 方案1: SQLite + ChromaDB 配置 ==========
-    SQLITE_DB_PATH: str = "../mgagent-backend/data/chat.db"
-    CHROMA_PERSIST_DIR: str = "../mgagent-backend/data/chroma"
-    
-    # ========== 方案2: MySQL + Milvus + MinIO 配置 ==========
     MYSQL_HOST: str = "localhost"
     MYSQL_PORT: int = 3306
     MYSQL_USER: str = "mgagent"
@@ -49,60 +35,30 @@ class Settings(BaseSettings):
     MILVUS_PORT: int = 19530
     MILVUS_COLLECTION: str = "mgagent_knowledge"
     
-    # MinIO 对象存储配置（MySQL 模式使用）
     MINIO_HOST: str = "localhost"
     MINIO_PORT: int = 9000
     MINIO_ACCESS_KEY: str = "minioadmin"
     MINIO_SECRET_KEY: str = "minioadmin"
     MINIO_BUCKET: str = "mgagent-documents"
     
-    # ========== 公共配置 ==========
     DOCUMENT_DIR: str = "../mgagent-backend/data/documents"
 
 settings = Settings()
 
-# ========== 路径配置 ==========
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 PROJECT_DIR = BASE_DIR.parent
 MGAGENT_BACKEND_DIR = PROJECT_DIR / "mgagent-backend"
 
-def get_database_scheme() -> DatabaseScheme:
-    """获取当前数据库方案"""
-    try:
-        return DatabaseScheme(settings.DATABASE_SCHEME)
-    except ValueError:
-        return DatabaseScheme.SQLITE
-
-def is_sqlite_scheme() -> bool:
-    """是否为 SQLite 方案"""
-    return get_database_scheme() == DatabaseScheme.SQLITE
-
-def is_mysql_scheme() -> bool:
-    """是否为 MySQL 方案"""
-    return get_database_scheme() == DatabaseScheme.MYSQL
 
 def get_database_url() -> str:
-    """获取数据库连接URL"""
-    if is_mysql_scheme():
-        return f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}?charset=utf8mb4"
-    else:
-        sqlite_path = (BASE_DIR / settings.SQLITE_DB_PATH).resolve()
-        return f"sqlite:///{sqlite_path}"
+    return f"mysql+pymysql://{settings.MYSQL_USER}:{settings.MYSQL_PASSWORD}@{settings.MYSQL_HOST}:{settings.MYSQL_PORT}/{settings.MYSQL_DATABASE}?charset=utf8mb4"
 
-def get_chroma_dir() -> Path:
-    """获取 ChromaDB 持久化目录"""
-    return (BASE_DIR / settings.CHROMA_PERSIST_DIR).resolve()
-
-def get_sqlite_path() -> Path:
-    """获取 SQLite 数据库路径"""
-    return (BASE_DIR / settings.SQLITE_DB_PATH).resolve()
 
 def get_document_dir() -> Path:
-    """获取文档目录"""
     return (BASE_DIR / settings.DOCUMENT_DIR).resolve()
 
+
 def get_minio_config() -> dict:
-    """获取 MinIO 配置"""
     return {
         "host": settings.MINIO_HOST,
         "port": settings.MINIO_PORT,
@@ -111,77 +67,38 @@ def get_minio_config() -> dict:
         "bucket": settings.MINIO_BUCKET,
     }
 
-# 初始化路径
-DOCUMENT_DIR = get_document_dir()
-CHROMA_DIR = get_chroma_dir()
-SQLITE_PATH = get_sqlite_path()
 
-for dir_path in [DOCUMENT_DIR, CHROMA_DIR]:
-    dir_path.mkdir(parents=True, exist_ok=True)
+DOCUMENT_DIR = get_document_dir()
+DOCUMENT_DIR.mkdir(parents=True, exist_ok=True)
+
 
 def get_scheme_info() -> dict:
-    """获取当前方案信息"""
-    scheme = get_database_scheme()
-    
-    if scheme == DatabaseScheme.SQLITE:
-        return {
-            "scheme": "sqlite",
-            "name": "SQLite + ChromaDB",
-            "description": "轻量级单机部署，适合开发调试",
-            "database": {
-                "type": "sqlite",
-                "name": "SQLite",
-                "version": "3",
-                "path": str(SQLITE_PATH),
-                "size": _get_file_size(SQLITE_PATH)
-            },
-            "vector_database": {
-                "type": "chromadb",
-                "name": "ChromaDB",
-                "version": "0.5+",
-                "path": str(CHROMA_DIR),
-                "collection": "default"
-            },
-            "file_storage": {
-                "type": "local",
-                "path": str(DOCUMENT_DIR)
-            }
-        }
-    else:
-        return {
-            "scheme": "mysql",
-            "name": "MySQL + Milvus + MinIO",
-            "description": "高性能生产级部署，适合大规模数据",
-            "database": {
-                "type": "mysql",
-                "name": "MySQL",
-                "version": "8.0",
-                "host": settings.MYSQL_HOST,
-                "port": settings.MYSQL_PORT,
-                "database": settings.MYSQL_DATABASE
-            },
-            "vector_database": {
-                "type": "milvus",
-                "name": "Milvus",
-                "version": "2.4",
-                "host": settings.MILVUS_HOST,
-                "port": settings.MILVUS_PORT,
-                "collection": settings.MILVUS_COLLECTION
-            },
-            "file_storage": {
-                "type": "minio",
-                "name": "MinIO",
-                "host": settings.MINIO_HOST,
-                "port": settings.MINIO_PORT,
-                "bucket": settings.MINIO_BUCKET
-            }
-        }
-
-def _get_file_size(path: Path) -> int:
-    """获取文件大小"""
-    try:
-        if path.exists():
-            return path.stat().st_size
-        return 0
-    except:
-        return 0
+    """获取当前技术栈信息（健康检查/状态接口返回）"""
+    return {
+        "scheme": "mysql",
+        "name": "MySQL + Milvus + MinIO",
+        "description": "高性能生产级部署",
+        "database": {
+            "type": "mysql",
+            "name": "MySQL",
+            "version": "8.0",
+            "host": settings.MYSQL_HOST,
+            "port": settings.MYSQL_PORT,
+            "database": settings.MYSQL_DATABASE,
+        },
+        "vector_database": {
+            "type": "milvus",
+            "name": "Milvus",
+            "version": "2.4",
+            "host": settings.MILVUS_HOST,
+            "port": settings.MILVUS_PORT,
+            "collection": settings.MILVUS_COLLECTION,
+        },
+        "file_storage": {
+            "type": "minio",
+            "name": "MinIO",
+            "host": settings.MINIO_HOST,
+            "port": settings.MINIO_PORT,
+            "bucket": settings.MINIO_BUCKET,
+        },
+    }

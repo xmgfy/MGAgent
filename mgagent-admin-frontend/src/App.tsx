@@ -16,7 +16,7 @@ const pageConfig: Record<string, { title: string; subtitle?: string }> = {
   'dashboard': { title: '概览', subtitle: '系统总览和关键指标' },
   'knowledge-base': { title: '知识库管理', subtitle: '管理文档和知识内容' },
   'vector-db': { title: '向量数据库', subtitle: '管理向量索引和搜索' },
-  'storage-db': { title: '存储数据库', subtitle: '管理 SQLite 数据库' },
+  'storage-db': { title: '存储数据库', subtitle: '管理 MySQL 数据库' },
   'model': { title: '配置管理', subtitle: '厂商和模型配置' },
   'users': { title: '用户管理', subtitle: '管理系统用户和权限审批' },
   'security': { title: '安全规则', subtitle: '管理 LLM 输出安全过滤规则' },

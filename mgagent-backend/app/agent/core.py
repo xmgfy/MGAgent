@@ -39,51 +39,64 @@ def get_llm(
     return create_llm_instance(model_type=model_type, tenant_id=tenant_id, scenario=scenario)
 
 
-# 定义工具函数
-@tool
-def rag_retrieve(query: str) -> str:
-    """检索企业知识库，用于查找公司政策、产品文档、流程规范等信息。当用户询问关于公司内部制度、产品信息、技术文档等问题时，应该优先使用此工具。"""
+def _rag_retrieve_impl(query: str, tenant_id: Optional[str] = None,
+                       knowledge_base_ids: Optional[List[str]] = None) -> str:
+    """统一的 RAG 检索实现 - 使用知识库配置驱动召回参数"""
     try:
-        # 延迟导入，避免循环导入
         from app.rag.retriever import get_vector_retriever
-        
-        # 使用更大的 k 值以提高召回率
+        from app.services.knowledge_base_service import (
+            get_knowledge_base_config,
+            get_default_knowledge_base,
+            get_active_knowledge_bases,
+        )
+
         retriever = get_vector_retriever()
-        docs = retriever.search(query, k=5)
-        
+
+        # 如果没有指定 kb_ids，查询所有活跃知识库的 ID 列表
+        effective_kb_ids = knowledge_base_ids
+        if not effective_kb_ids:
+            active_kbs = get_active_knowledge_bases()
+            effective_kb_ids = [kb.id for kb in active_kbs] if active_kbs else None
+
+        # 从 Default 知识库读取全局默认召回参数（retrieve_limit / similarity_threshold / enable_rerank / rerank_top_n）
+        default_kb_cfg = get_knowledge_base_config(get_default_knowledge_base().id)
+
+        docs = retriever.similarity_search_with_config(
+            query=query,
+            config=default_kb_cfg,
+            k=default_kb_cfg.get("retrieve_limit", 5),
+        )
+
         if not docs:
             return "未在企业知识库中找到相关内容。"
-        
-        # 检查检索结果是否与查询相关
-        relevant_docs = []
-        for doc in docs:
-            content = doc.page_content
-            # 简单的相关性检查：如果文档内容包含查询中的关键词，则认为相关
-            query_keywords = [w for w in query if w.strip()]
-            is_relevant = any(kw in content for kw in query_keywords)
-            
-            # 即使没有关键词匹配，也保留所有结果（让 LLM 判断相关性）
-            relevant_docs.append({
-                "content": content,
-                "source": doc.metadata.get('source', '未知文档'),
-                "score": doc.metadata.get('score', 0),
-                "relevant": is_relevant
-            })
-        
-        # 如果没有找到完全匹配的结果，仍然返回检索到的内容
-        # 让 LLM 来判断相关性
+
         context_parts = []
-        for i, doc in enumerate(relevant_docs, 1):
+        for i, doc in enumerate(docs, 1):
             context_parts.append(
-                f"【文档{i} | 来源: {doc['source']} | 相似度: {doc['score']:.4f}】\n{doc['content']}"
+                f"【文档{i} | 来源: {doc.metadata.get('source', '未知文档')} | 相似度: {doc.metadata.get('score', 0):.4f}】\n{doc.page_content}"
             )
-        
+
         context = "\n\n---\n\n".join(context_parts)
-        
-        return f"检索到以下相关文档内容（共{len(relevant_docs)}条）：\n\n{context}"
+        return f"检索到以下相关文档内容（共{len(docs)}条）：\n\n{context}"
     except Exception as e:
         logger.error(f"知识库检索失败: {str(e)}")
         return f"知识库检索失败: {str(e)}"
+
+
+# 动态生成的 tool（每次创建 EnterpriseAgent 时绑定当前的 tenant_id / kb_ids）
+def _make_rag_tool(tenant_id: Optional[str], knowledge_base_ids: Optional[List[str]]):
+    @tool
+    def rag_retrieve(query: str) -> str:
+        """检索企业知识库，用于查找公司政策、产品文档、流程规范等信息。当用户询问关于公司内部制度、产品信息、技术文档等问题时，应该优先使用此工具。"""
+        return _rag_retrieve_impl(query, tenant_id=tenant_id, knowledge_base_ids=knowledge_base_ids)
+    rag_retrieve.name = "rag_retrieve"
+    return rag_retrieve
+
+
+@tool
+def rag_retrieve_global(query: str) -> str:
+    """检索企业知识库（全局），用于查找公司政策、产品文档、流程规范等信息。"""
+    return _rag_retrieve_impl(query)
 
 
 @tool
@@ -113,14 +126,24 @@ def query_database(sql: str) -> str:
 
 
 # 工具列表
-TOOLS = [rag_retrieve, calculate, query_database]
+DEFAULT_TOOLS = [rag_retrieve_global, calculate, query_database]
 
 
 class EnterpriseAgent:
     """企业智能客服 Agent"""
-    
-    def __init__(self):
-        self.tools = TOOLS
+
+    def __init__(
+        self,
+        tenant_id: Optional[str] = None,
+        knowledge_base_ids: Optional[List[str]] = None,
+    ):
+        self.tenant_id = tenant_id
+        self.knowledge_base_ids = knowledge_base_ids or None
+
+        # 根据是否有上下文动态绑定 rag 工具
+        tools: List = [calculate, query_database]
+        tools.append(_make_rag_tool(tenant_id, self.knowledge_base_ids))
+        self.tools = tools
     
     def _build_system_prompt(self) -> str:
         """构建系统提示词"""
@@ -334,5 +357,5 @@ class EnterpriseAgent:
         )
 
 
-# 全局实例
+# 全局实例（默认无租户、无 kb_ids，由 chat_service 按需创建带上下文的实例）
 enterprise_agent = EnterpriseAgent()

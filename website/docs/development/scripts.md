@@ -15,11 +15,11 @@ MGAgent 在 `scripts/` 目录下提供了一系列工具脚本，用于简化部
 | 脚本 | 用途 | 适用场景 |
 |------|------|---------|
 | `init.sh` | 一键初始化项目 | 首次安装 |
-| `start-all.sh` | 启动本地开发服务 | 本地开发（sqlite/mysql） |
+| `start-all.sh` | 启动本地开发服务 | 本地开发 |
 | `stop-all.sh` | 停止本地开发服务 | 本地开发 |
 | `status.sh` | 检查服务状态 | 运维监控 |
 | `deploy.sh` | 一键生产部署 | 生产环境部署 |
-| `docker-services.sh` | 基础设施服务管理 | MySQL 模式本地调试 |
+| `docker-services.sh` | 基础设施服务管理 | 本地调试 |
 | `download_local_models.py` | 下载本地 Embedding 模型 | 部署阶段下载 AI 模型 |
 
 ## init.sh - 项目初始化
@@ -64,27 +64,25 @@ Python 依赖安装完成
 =========================================
 
 使用说明:
-  启动服务 (SQLite): ./scripts/start-all.sh sqlite
-  启动服务 (MySQL):  ./scripts/start-all.sh mysql
+  启动服务:          ./scripts/start-all.sh
   停止服务:          ./scripts/stop-all.sh
   检查服务状态:      ./scripts/status.sh
 ```
 
 ## start-all.sh - 启动本地服务
 
-一键启动所有本地开发服务（4 个进程），支持 SQLite 和 MySQL 两种模式。
+一键启动所有本地开发服务（4 个进程）。启动前需先通过 `docker-services.sh` 启动 MySQL + Milvus + MinIO 基础设施。
 
 ### 使用方法
 
 ```bash
 chmod +x scripts/start-all.sh
 
-# SQLite 模式（默认，无需 Docker）
-./scripts/start-all.sh sqlite
-
-# MySQL 模式（需先启动 Docker 基础设施）
+# 先启动 Docker 基础设施
 ./scripts/docker-services.sh start
-./scripts/start-all.sh mysql
+
+# 启动应用
+./scripts/start-all.sh
 ```
 
 ### 启动的服务
@@ -316,7 +314,7 @@ flowchart LR
 
 ## docker-services.sh - 基础设施管理
 
-专门管理 MySQL + Milvus 基础设施服务的脚本。
+专门管理 MySQL + Milvus + MinIO 基础设施服务的脚本。
 
 ### 使用方法
 
@@ -485,15 +483,12 @@ pip install sentence-transformers
 # 首次使用
 ./scripts/init.sh
 
-# 本地开发（SQLite 模式，无需 Docker）
-./scripts/start-all.sh sqlite       # 启动
-./scripts/status.sh                 # 检查
-./scripts/stop-all.sh               # 停止
-
-# 本地开发（MySQL 模式，需 Docker）
+# 本地开发（需 Docker 基础设施）
 ./scripts/docker-services.sh start  # 启动基础设施
-./scripts/start-all.sh mysql        # 启动应用
-./scripts/docker-services.sh stop   # 停止基础设施
+./scripts/start-all.sh              # 启动应用
+./scripts/status.sh                 # 检查
+./scripts/stop-all.sh               # 停止应用
+./scripts/docker-services.sh stop    # 停止基础设施
 
 # 生产环境部署
 cp .env.production.example .env.production  # 首次配置

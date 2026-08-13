@@ -121,7 +121,7 @@ vim .env.production
 ```
 
 :::tip 本地开发
-本地开发模式下，`start-all.sh` 脚本会自动加载对应模式（sqlite/mysql）的环境变量，无需手动配置。
+本地开发模式下，`start-all.sh` 脚本会自动加载 `.env` 中的环境变量，无需手动配置。
 :::
 
 ## 验证安装

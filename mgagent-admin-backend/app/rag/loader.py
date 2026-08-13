@@ -32,7 +32,6 @@ def _language_from_ext(ext: str) -> str:
 
 
 def _update_markdown_heading_path(chunk: Document, stack: List[str]) -> None:
-    """从 chunk 内容中提取 Markdown 标题，更新 heading stack（原地修改 stack）"""
     import re
     heading_pattern = re.compile(r"^(#{1,6})\s+(.+)$", re.MULTILINE)
     for m in heading_pattern.finditer(chunk.page_content):
@@ -57,21 +56,6 @@ class DocumentLoader:
             separators=separators if separators is not None else DEFAULT_SEPARATORS,
         )
 
-    @classmethod
-    def from_knowledge_base_config(cls, kb_config: Dict) -> "DocumentLoader":
-        chunk_size = kb_config.get("chunk_size", 500)
-        chunk_overlap = kb_config.get("chunk_overlap", 50)
-        chunk_separator = kb_config.get("chunk_separator")
-        if chunk_separator:
-            separators = [s for s in chunk_separator.split(",")]
-        else:
-            separators = DEFAULT_SEPARATORS
-        return cls(
-            chunk_size=chunk_size,
-            chunk_overlap=chunk_overlap,
-            separators=separators,
-        )
-
     def load_file(self, file_path: str) -> List[Document]:
         path = Path(file_path)
         if not path.exists():
@@ -92,10 +76,7 @@ class DocumentLoader:
         elif file_ext == ".docx":
             loader = Docx2txtLoader(str(path))
             docs = loader.load()
-        elif file_ext in (".md",) or file_ext in CODE_EXTENSIONS:
-            loader = TextLoader(str(path), encoding="utf-8")
-            docs = loader.load()
-        elif file_ext == ".txt":
+        elif file_ext == ".md" or file_ext in CODE_EXTENSIONS or file_ext == ".txt":
             loader = TextLoader(str(path), encoding="utf-8")
             docs = loader.load()
         else:
@@ -112,13 +93,11 @@ class DocumentLoader:
 
         chunks = self.text_splitter.split_documents(docs)
 
-        # 分块后处理：chunk index + Markdown 标题路径
         heading_stack: List[str] = []
         for idx, chunk in enumerate(chunks):
             chunk.metadata["chunk_index"] = idx
             chunk.metadata["total_chunks"] = len(chunks)
             chunk.metadata["char_count"] = len(chunk.page_content)
-
             if file_ext == ".md":
                 _update_markdown_heading_path(chunk, heading_stack)
                 chunk.metadata["heading_path"] = "/".join(heading_stack) if heading_stack else ""
@@ -134,9 +113,7 @@ class DocumentLoader:
         try:
             sheets = pd.read_excel(file_path, sheet_name=None)
         except Exception as e:
-            raise ImportError(
-                f"读取 Excel 失败: {e}。可能需要 pip install openpyxl"
-            )
+            raise ImportError(f"读取 Excel 失败: {e}。可能需要 pip install openpyxl")
 
         docs = []
         for sheet_name, df in sheets.items():
@@ -150,8 +127,7 @@ class DocumentLoader:
     def _load_csv(self, file_path: str, base_meta: Dict) -> List[Document]:
         import csv
         with open(file_path, "r", encoding="utf-8-sig", errors="ignore") as f:
-            reader = csv.reader(f)
-            rows = list(reader)
+            rows = list(csv.reader(f))
         if not rows:
             return []
         header = rows[0]
@@ -177,23 +153,5 @@ class DocumentLoader:
                 meta = {**base_meta, "item_index": i, "total_items": len(data)}
                 docs.append(Document(page_content=text, metadata=meta))
             return docs
-        else:
-            text = json.dumps(data, ensure_ascii=False, indent=2)
-            return [Document(page_content=text, metadata=base_meta)]
-
-    def load_directory(self, dir_path: str) -> List[Document]:
-        dir = Path(dir_path)
-        if not dir.exists() or not dir.is_dir():
-            raise FileNotFoundError(f"目录不存在: {dir_path}")
-
-        all_documents = []
-
-        for file in dir.iterdir():
-            if file.is_file() and file.suffix.lower() in SUPPORTED_EXTENSIONS:
-                try:
-                    documents = self.load_file(str(file))
-                    all_documents.extend(documents)
-                except Exception as e:
-                    print(f"加载文件失败 {file.name}: {e}")
-
-        return all_documents
+        text = json.dumps(data, ensure_ascii=False, indent=2)
+        return [Document(page_content=text, metadata=base_meta)]
