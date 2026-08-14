@@ -28,6 +28,9 @@ node_modules/
 package-lock.json
 yarn.lock
 pnpm-lock.yaml
+!website/package-lock.json
+!mgagent-frontend/package-lock.json
+!mgagent-admin-frontend/package-lock.json
 
 # Docusaurus 构建缓存
 .docusaurus/
