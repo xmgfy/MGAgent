@@ -410,7 +410,7 @@ POST /admin/api/model/config
 | 场景 | 推荐模型 | 理由 |
 |------|---------|------|
 | 调试开发 / 资源受限 | `bge-small-zh` 或 `paraphrase-multilingual` | 体积小、加载快 |
-| 小规模知识库（<10万文档） | `bge-base-zh` | 效果与资源平衡 |
+| 小规模知识库（&lt;10万文档） | `bge-base-zh` | 效果与资源平衡 |
 | 生产环境（10万+文档） | `bge-large-zh` | 中文效果最好 |
 | 中英文混合 | `bge-m3` | 双语支持 |
 | 多语言且资源有限 | `paraphrase-multilingual` | 仅 120MB |

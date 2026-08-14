@@ -428,7 +428,7 @@ python scripts/download_local_models.py --list --json
 | 场景 | 推荐模型 |
 |------|---------|
 | 调试开发 | bge-small-zh |
-| 小规模知识库 (<10万文档) | bge-base-zh |
+| 小规模知识库 (&lt;10万文档) | bge-base-zh |
 | 生产环境 (10万+文档) | bge-large-zh |
 | 中英文混合 | bge-m3 |
 | 资源受限 | paraphrase-multilingual |
